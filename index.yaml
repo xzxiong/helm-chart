@@ -24,4 +24,24 @@ entries:
     urls:
     - https://github.com/xzxiong/mo-helm/releases/download/chart-0.7.0/mo-agent-stack-0.7.0.tgz
     version: 0.7.0
-generated: "2023-07-04T08:05:23.239636831Z"
+  mo-ruler-stack:
+  - apiVersion: v2
+    appVersion: 0.1.0
+    created: "2023-07-04T12:29:32.268731374Z"
+    dependencies:
+    - condition: alertmanager.enabled
+      name: alertmanager
+      repository: https://prometheus-community.github.io/helm-charts
+      version: 0.27.*
+    - condition: grafana.enabled
+      name: grafana
+      repository: https://grafana.github.io/helm-charts
+      version: 6.47.*
+    description: MO-Ruler's Helm chart for Kubernetes
+    digest: f49512f7a118adf88403d399f3148be79225482f50cecc4336b0cf88b12ea70b
+    name: mo-ruler-stack
+    type: application
+    urls:
+    - https://github.com/xzxiong/mo-helm/releases/download/chart-mo-ruler-stack-0.7.0/mo-ruler-stack-0.7.0.tgz
+    version: 0.7.0
+generated: "2023-07-04T12:29:32.268741675Z"
