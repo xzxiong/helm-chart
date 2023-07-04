@@ -1,0 +1,490 @@
+moAgent:
+  replicaCount: 1
+  
+
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 2024Mi
+    requests:
+      cpu: 1000m
+      memory: 2024Mi
+
+  image:
+    containerName: mo-agent
+    repository: matrixorigin/observability
+    pullPolicy: Always
+    # Overrides the image tag whose default is the chart appVersion.
+    tag: "mo-agent-0.7.0"
+
+  nameOverride: ""
+  fullnameOverride: ""
+  
+  service:
+    type: ClusterIP
+    port: 8000
+    targetPort: 8000 
+
+  apiServer:
+    port: 8000
+  
+  agentSpec:
+    log:
+      level: info
+      format: console
+      filename:
+      maxSize:
+      maxDays:
+      maxBackups:
+
+    server:
+      host: localhost
+      port: 8000
+      privateKeyFile:
+      publicKeyFile:
+      tokenEffectiveTime: 2
+      certPath:
+      mode: playground
+
+    app:
+      uuid: 8f0e5ef6de8fe306d772fba5d29e75e8
+      account: sys
+      database: observability
+      # val in [tae, csv], default: tae
+      extension: tae
+      # val in [sql, fs], default: sql
+      exporter: sql
+      exportThreads: 128
+      exportInterval: 3s
+      bufferBytes: 2097152
+      showAccessLog: false
+      # api data handle queue size
+      queueSize : 262144 # queue mem cost : 2MB
+      # metric table name cache size
+      metricCacheSize : 4096
+      # label series id cache size
+      labelCacheSize : 200000
+      # log table name cache size
+      logCacheSize : 512
+      preCreatetableWorker : 5
+      # pre load label id limit
+      labelPreloadLimit : 200000
+      labelFlushSize: 5242880 # 5MB
+      labelFlushInterval: 6s
+      # comment to use values default: prom,node-exporter
+      # metricTablesPreCreate: 
+
+    fs:
+      name: ETL
+      # [MEM|DISK|DISK-ETL|S3|MINIO]
+      backend: S3
+      dataDir: "mo-data/etl"
+      s3:
+        endpoint: s3.us-west-2.amazonaws.com
+        # test
+        # endpoint: http://minio-0.minio.mo-system:9000
+        bucket: <OB_BUCKET_PATH>
+        keyPrefix: "etl"
+
+    mo:
+      host: mo-tp-cn.<OB_NAMESPACE>
+      port: 6001
+      user: dump
+      password: 111
+      connectTimeout: 15s
+      maxOpens: 5
+      maxIdles: -1
+      initPingCnt: 60
+
+cadvisor:
+  enabled: true
+  container:
+    port: 8080
+    additionalArgs:
+      - --housekeeping_interval=10s                       # kubernetes default args
+      - --max_housekeeping_interval=15s
+      - --event_storage_event_limit=default=0
+      - --event_storage_age_limit=default=0
+      - --disable_metrics=percpu,process,sched,tcp,udp    # enable only diskIO, cpu, memory, network, disk
+      - --docker_only
+    hostPaths:
+      - name: rootfs
+        path: "/"
+        mount: "/rootfs"
+      - name: varrun
+        path: "/var/run"
+      - name: sys
+        path: "/sys"
+      - name: docker
+        path: "/var/lib/docker"
+      - name: disk
+        path: "/dev/disk"
+
+  resources: {}
+    # limits:
+    #   cpu: 100m
+    #   memory: 128Mi
+    # requests:
+    #   cpu: 100m
+    #   memory: 128Mi
+
+prometheus:
+  enabled: true
+  global:
+    ## How frequently to scrape targets by default
+    ##
+    scrape_interval: 1m
+    ## How long until a scrape request times out
+    ##
+    scrape_timeout: 10s
+    ## How frequently to evaluate rules
+    ##
+    evaluation_interval: 1m
+  replicaCount: 1
+  alertmanager:
+    enabled: false
+
+  prometheus-pushgateway:
+    enabled: false
+
+  kube-state-metrics:
+    enabled: true
+
+  prometheus-node-exporter:
+    enabled: true
+    extraArgs:
+    - --collector.disable-defaults
+    - --collector.arp
+    - --collector.conntrack
+    - --collector.cpu
+    - --collector.diskstats
+    - --collector.filefd
+    - --collector.loadavg
+    - --collector.meminfo
+    - --collector.netstat
+    - --collector.nvme
+    - --collector.pressure
+    - --collector.schedstat
+    - --collector.sockstat
+    - --collector.softnet
+    - --collector.stat
+    - --collector.udp_queues
+    - --collector.vmstat
+    - --collector.xfs
+    - --collector.uname
+    - --collector.filesystem.mount-points-exclude=^/(dev|proc|sys|var/lib/docker/.+|var/lib/kubelet/.+)($|/)
+    - --collector.filesystem.fs-types-exclude=^(autofs|binfmt_misc|bpf|cgroup2?|configfs|debugfs|devpts|devtmpfs|fusectl|hugetlbfs|iso9660|mqueue|nsfs|overlay|proc|procfs|pstore|rpc_pipefs|securityfs|selinuxfs|squashfs|sysfs|tracefs)$
+
+  server:
+    defaultFlagsOverride:
+      [
+        "--enable-feature=agent",
+        "--storage.agent.retention.max-time=30m",
+        "--storage.agent.path=/prometheus",
+        # "--config.file=/etc/prometheus/config_out/prometheus.env.yaml",
+        "--config.file=/etc/config/prometheus.yml",
+      ]
+    extraFlags:
+      - web.enable-lifecycle
+    remoteWrite: 
+      - url: "http://mo-agent-service.<OB_NAMESPACE>:8000/v1/metrics"
+  # 这里需要将rule置空，否则报错
+  serverFiles:
+    prometheus.yml:
+      rule_files: []
+      scrape_configs:
+        - job_name: prometheus
+          static_configs:
+            - targets:
+              - localhost:9090        
+        - job_name: 'user-application'
+          honor_labels: true
+          kubernetes_sd_configs:
+            - role: endpoints
+          relabel_configs:
+          - source_labels: [__meta_kubernetes_namespace]
+            action: keep
+            regex: "mo-cloud"
+          - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_scheme]
+            action: replace
+            target_label: __scheme__
+            regex: (https?)
+          - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_path]
+            action: replace
+            target_label: __metrics_path__
+            regex: (.+)
+          - source_labels: [__address__, __meta_kubernetes_service_annotation_prometheus_io_port]
+            action: replace
+            target_label: __address__
+            regex: (.+?)(?::\d+)?;(\d+)
+            replacement: $1:$2
+          - action: labelmap
+            regex: __meta_kubernetes_service_annotation_prometheus_io_param_(.+)
+            replacement: __param_$1
+          - action: labelmap
+            regex: __meta_kubernetes_service_label_(.+)
+          - source_labels: [__meta_kubernetes_namespace]
+            action: replace
+            target_label: namespace
+          - source_labels: [__meta_kubernetes_service_name]
+            action: replace
+            target_label: service
+          - source_labels: [__meta_kubernetes_pod_node_name]
+            action: replace
+            target_label: node
+        - job_name: 'kubernetes-service-endpoints'
+          honor_labels: true
+          kubernetes_sd_configs:
+            - role: endpoints
+          relabel_configs:
+            - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_scrape]
+              action: keep
+              regex: true
+            - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_scrape_slow]
+              action: drop
+              regex: true
+            - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_scheme]
+              action: replace
+              target_label: __scheme__
+              regex: (https?)
+            - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_path]
+              action: replace
+              target_label: __metrics_path__
+              regex: (.+)
+            - source_labels: [__address__, __meta_kubernetes_service_annotation_prometheus_io_port]
+              action: replace
+              target_label: __address__
+              regex: (.+?)(?::\d+)?;(\d+)
+              replacement: $1:$2
+            - action: labelmap
+              regex: __meta_kubernetes_service_annotation_prometheus_io_param_(.+)
+              replacement: __param_$1
+            - action: labelmap
+              regex: __meta_kubernetes_service_label_(.+)
+            - source_labels: [__meta_kubernetes_namespace]
+              action: replace
+              target_label: namespace
+            - source_labels: [__meta_kubernetes_service_name]
+              action: replace
+              target_label: service
+            - source_labels: [__meta_kubernetes_pod_node_name]
+              action: replace
+              target_label: node
+              
+fluent-bit:
+  image:
+    repository: cr.fluentbit.io/fluent/fluent-bit
+    # Overrides the image tag whose default is {{ .Chart.AppVersion }}
+    tag: 2.0.8-debug
+    pullPolicy: Always
+  logLevel: info
+  replicaCount: 1
+  enabled: true
+  ## https://docs.fluentbit.io/manual/administration/configuring-fluent-bit/configuration-file
+  config:
+    service: |
+      [SERVICE]
+          Daemon Off
+          Flush {{ .Values.flush }}
+          Log_Level {{ .Values.logLevel }}
+          Parsers_File parsers.conf
+          Parsers_File custom_parsers.conf
+          HTTP_Server On
+          HTTP_Listen 0.0.0.0
+          HTTP_Port {{ .Values.metricsPort }}
+          Health_Check On
+    ## https://docs.fluentbit.io/manual/pipeline/inputs
+    inputs: |
+      # Blacklist Mode
+      # [INPUT]
+      #     Name tail
+      #     Exclude_Path     /var/log/containers/*fluent-bit*,/var/log/containers/*mo-tp-cn*
+      #     Path             /var/log/containers/*.log
+      #     multiline.parser docker, cri, go 
+      #     Tag kube.*
+      #     Mem_Buf_Limit 5MB
+      #     Skip_Long_Lines On
+      #     Refresh_Interval  10
+      
+      # Whitelist Mode
+      [INPUT]
+          Name tail
+          Path             /var/log/containers/*_cos_*.log,/var/log/containers/*_cos-system_*.log, /var/log/containers/*_mo-cloud_*.log, /var/log/containers/*_mo-system_*.log
+          multiline.parser docker, cri, go 
+          Tag kube.*
+          Mem_Buf_Limit 5MB
+          Skip_Long_Lines Off
+          Refresh_Interval  10
+      
+      # dataplane-log
+      [INPUT]
+          Name                systemd
+          Tag                 dataplane.systemd.*
+          Systemd_Filter      _SYSTEMD_UNIT=docker.service
+          Systemd_Filter      _SYSTEMD_UNIT=kubelet.service
+          Path                /var/log/journal
+
+      # host-log
+      [INPUT]
+          Name                tail
+          Tag                 host.dmesg
+          Path                /var/log/dmesg
+          Parser              syslog
+          Mem_Buf_Limit       5MB
+          Skip_Long_Lines     On
+          Refresh_Interval    10
+
+      [INPUT]
+          Name                tail
+          Tag                 host.messages
+          Path                /var/log/messages
+          Parser              syslog
+          Mem_Buf_Limit       5MB
+          Skip_Long_Lines     On
+          Refresh_Interval    10
+
+      [INPUT]
+          Name                tail
+          Tag                 host.secure
+          Path                /var/log/secure
+          Parser              syslog
+          # DB                  /var/fluent-bit/state/flb_secure.db
+          Mem_Buf_Limit       5MB
+          Skip_Long_Lines     On
+          Refresh_Interval    10
+
+    ## https://docs.fluentbit.io/manual/pipeline/filters
+    filters: |
+      # filter for k8s
+      [FILTER]
+          Name kubernetes
+          Match kube.*
+          Merge_Log On
+          Keep_Log Off
+          K8S-Logging.Parser On
+          K8S-Logging.Exclude On
+      # pick below "wildcard" field to parse, others move to "extra"
+      [FILTER]
+          Name nest
+          Match kube.*
+          Operation nest
+          Wildcard log
+          Wildcard msg
+          Wildcard time
+          Wildcard status
+          Wildcard stacktrace
+          Wildcard kubernetes
+          Wildcard level
+          Nested_under moob_fluentbit_extra
+      [FILTER]
+          Name nest
+          Match kube.*
+          Operation nest
+          Wildcard *
+          Nest_under extra
+      [FILTER]
+          Name nest
+          Match kube.*
+          Operation lift
+          Nested_under extra
+          Add_prefix Lifted_
+      [FILTER]
+          Name nest
+          Match kube.*
+          Operation lift
+          Nested_under Lifted_moob_fluentbit_extra
+      [FILTER]
+          name nest
+          Match kube.*
+          Operation lift
+      [FILTER]
+          Name nest
+          Match kube.*
+          Operation nest
+          Wildcard Lifted_*
+          Nested_under extra
+          Remove_prefix Lifted_
+      [FILTER]
+          Name nest
+          Match kube.*
+          Operation lift
+          Nested_under kubernetes
+          Add_prefix k8s_
+      [FILTER]
+          Name                modify
+          Match               kube.*
+          Copy                k8s_namespace_name          service_name
+          Copy                k8s_container_name             app_name
+      [FILTER]
+          Name nest
+          Match kube.*
+          Operation nest
+          Wildcard k8s_*
+          Nested_under kubernetes
+          Remove_prefix k8s_
+      # filter for syslog
+      [FILTER]
+          Name                modify
+          Match               dataplane.systemd.*
+          Rename              _HOSTNAME                   hostname
+          Add                 service_name                dataplane_systemd
+          Copy                _SYSTEMD_UNIT               app_name
+          Rename              _SYSTEMD_UNIT               systemd_unit
+          Rename              MESSAGE                     message
+          Remove_regex        ^((?!hostname|systemd_unit|service_name|app_name|message).)*$
+      
+      [FILTER]
+          Name                modify
+          Match               host.dmesg
+          Add   service_name  syslog
+          Add   app_name      dmesg
+      
+      [FILTER]
+          Name                modify
+          Match               host.messages
+          Add   service_name  syslog
+          Add   app_name      messages
+      [FILTER]
+          Name                modify
+          Match               host.secure
+          Add   service_name  syslog
+          Add   app_name      secure
+    
+    outputs: |
+      [OUTPUT]
+          Name  http
+          Match *
+          Host  mo-agent-service.mo-ob
+          Port  8000
+          URI   /v1/logs
+          Format json
+      [OUTPUT]
+          Name stdout
+          Match *
+          # Format json
+          Json_date_key timestamp
+          Json_date_format iso8601
+    customParsers: |
+      [PARSER]
+          Name docker_no_time
+          Format json
+          Time_Keep Off
+          Time_Key time
+          Time_Format %Y-%m-%dT%H:%M:%S.%L
+      [PARSER]
+          Name                syslog
+          Format              regex
+          Regex               ^(?<time>[^ ]* {1,2}[^ ]* [^ ]*) (?<host>[^ ]*) (?<ident>[a-zA-Z0-9_\/\.\-]*)(?:\[(?<pid>[0-9]+)\])?(?:[^\:]*\:)? *(?<message>.*)$
+          Time_Key            time
+          Time_Format         %b %d %H:%M:%S
+      [PARSER]
+          Name                container_firstline
+          Format              regex
+          Regex               (?<log>(?<="log":")\S(?!\.).*?)(?<!\\)".*(?<stream>(?<="stream":").*?)".*(?<time>\d{4}-\d{1,2}-\d{1,2}T\d{2}:\d{2}:\d{2}\.\w*).*(?=})
+          Time_Key            time
+          Time_Format         %Y-%m-%dT%H:%M:%S.%LZ
+
+
+
+
+

@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mo-agent-deployment
+  labels:
+    app: mo-agent
+spec:
+  replicas: {{ .Values.moAgent.replicaCount }}
+  selector:
+    matchLabels:
+      app: mo-agent
+  template:
+    metadata:
+      labels:
+        app: mo-agent
+    spec:
+      containers:
+      - name: {{ .Values.moAgent.image.containerName }}
+        image: "{{ .Values.moAgent.image.repository }}:{{ .Values.moAgent.image.tag }}"
+        imagePullPolicy: {{ .Values.moAgent.image.pullPolicy }}
+        resources:
+{{ toYaml .Values.moAgent.resources | indent 10 }}
+        ports:
+        - containerPort: {{ .Values.moAgent.apiServer.port }}
+        env:
+        - name: AWS_REGION
+          valueFrom:
+            secretKeyRef:
+              name: aws
+              key: AWS_REGION
+              optional: false 
+        - name: AWS_ACCESS_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              name: aws
+              key: AWS_ACCESS_KEY_ID
+              optional: false 
+        - name: AWS_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: aws
+              key: AWS_SECRET_ACCESS_KEY
+              optional: false 
+        volumeMounts:
+          - name: agent-config
+            mountPath: /service.yaml
+            subPath: service.yaml
+            
+      volumes:
+      - name: agent-config
+        configMap:
+          name: mo-agent-config-map
+          items:
+            - key: mo-agent.yaml
+              path: service.yaml
