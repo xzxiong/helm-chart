@@ -1,80 +1,8 @@
 grafana:
-  replicas: 1
   enabled: true
-    # static passwd
-    #adminUser: admin
-    #adminPassword: admin
-  admin:
-    ## Name of the secret. Can be templated.
-    existingSecret: "grafana-admin-secret"
-    userKey: admin-user
-    passwordKey: admin-password
-  # for grafana.ini
-  extraSecretMounts:
-    - name: auth-generic-oauth-secret-mount
-      secretName: auth-generic-oauth-secret
-      defaultMode: 0440
-      mountPath: /etc/secrets/auth_generic_oauth
-      readOnly: true
-  grafana.ini:
-    auth.generic_oauth:
-      name: dex
-      enabled: true
-      scopes: openid profile email offline_access
-      auth_url: https://oidc.matrixorigin.cn:31443/dex/auth
-      token_url: https://oidc.matrixorigin.cn:31443/dex/token
-      api_url: https://oidc.matrixorigin.cn:31443/dex/userinfo
-      allow_sign_up: true
-      client_id: $__file{/etc/secrets/auth_generic_oauth/client_id}
-      client_secret: $__file{/etc/secrets/auth_generic_oauth/client_secret}
-  service:
-    enabled: true
-    type: LoadBalancer
-    port: 3000
-    targetPort: 3000
-    # targetPort: 4181 To be used with a proxy extraContainer
-    ## Service annotations. Can be templated.
-    annotations: {}
-    labels: {}
-    portName: service
-    # Adds the appProtocol field to the service. This allows to work with istio protocol selection. Ex: "http" or "tcp"
-    appProtocol: ""
-  sidecar:
-    dashboards:
-      enabled: true
-    datasources:
-      enabled: true
-      searchNamespace: ALL
 
 alertmanager:
-  replicaCount: 1
   enabled: true
-  config:
-    global: 
-        resolve_timeout: 5m
-        smtp_from: 'it@matrixorigin.cn'
-        smtp_hello: 'smtp.exmail.qq.com:465'
-        smtp_smarthost: 'smtp.exmail.qq.com:465'
-        smtp_auth_username: 'it@matrixorigin.cn'
-        smtp_auth_password_file: '/tmp/smtp-password/smtp-password'
-        smtp_require_tls: false
-    route:
-        group_by: ['alertname']     # 分组标签
-        group_wait: 10s             # 告警等待时间。告警产生后等待10s，如果有同组告警一起发出
-        group_interval: 10s         # 两组告警的间隔时间
-        repeat_interval: 1d         # 重复告警的间隔时间，可减少相同邮件的发送频率
-        receiver: 'default-receiver'
-    receivers:
-      - name: default-receiver
-        email_configs:
-          - to: 'user@matrixorigin.cn'
-            # send_resolved: true
-  extraSecretMounts: 
-  - name: smtp-files
-    mountPath: /tmp/smtp-password
-    subPath: ""
-    secretName: alertmanager-secret
-    readOnly: true
 
 moRuler:
   replicaCount: 1
@@ -82,29 +10,15 @@ moRuler:
     repository: matrixone-cloud/observability
     tag: mo-ruler-local
     pullPolicy: IfNotPresent
-
-  extraSecretMounts:
-  - name: ruler-mo-secret-mount
-    secretName: mo-ob-secret
-    mountPath: /etc/secrets/ruler-mo-secret
-    readOnly: true
-    defaultMode: 0440
   
   rulerSpec:
-    alerting:
-      alertingEndpoint:
-        scheme: http
-        targets:
-          - "mo-ruler-stack-alertmanager.mo-ob:9093"
     secret: mo-ob-secret
     ruler:
       mo:
-        type: env
+        type: cfg
+        labels:
+          matrixone.cloud/role: observability
         host: matrixone.xiezexiong
         port: 6001
         user: dump
         password: 111
-        connectTimeout: 15s
-        maxOpens: 5
-        maxIdles: -1
-        initPingCnt: 10

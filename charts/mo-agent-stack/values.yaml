@@ -6,10 +6,10 @@ moAgent:
 
   image:
     containerName: mo-agent
-    repository: ez4bruce3280/mo-agent
+    repository: matrixorigin/observability
     pullPolicy: IfNotPresent
     # Overrides the image tag whose default is the chart appVersion.
-    tag: ""
+    tag: "0.9.0"
   resources:
     limits:
       cpu: 1000m
@@ -38,7 +38,7 @@ moAgent:
 
   agentSpec:
     # cooperate with mo.type = env & extraSecretMounts
-    secret: root
+    secret: mo-ob-secret
     log:
       level: info
       format: console
@@ -57,7 +57,7 @@ moAgent:
         metricRetentionPeriod: "336h"        # 保留 14天
         traceRetentionPeriod: "336h"        # 保留 14天
     server:
-      host: localhost
+      host: 0.0.0.0
       port: 8000
       privateKeyFile:
       publicKeyFile:
@@ -67,10 +67,9 @@ moAgent:
     mo:
       # valid value in [ cfg, env, cluster ], default: cfg.
       type: cfg
-      secret:
-      host: 127.0.0.1
       labels:
         matrixone.cloud/role: observability
+      host: 127.0.0.1
       port: 6001
       user: dump
       password: 111
@@ -1090,1218 +1089,79 @@ moAgent:
       # - kubernetes_build_info
 
 
-# Extend default values from https://github.com/fluent/helm-charts/blob/main/charts/fluent-bit/values.yaml
-#
-fluent-bit:
-  enabled: true
-
-  # Default values for fluent-bit.
-
-  # kind -- DaemonSet or Deployment
-  kind: DaemonSet
-
-  # replicaCount -- Only applicable if kind=Deployment
-  replicaCount: 1
-
-  image:
-    repository: cr.fluentbit.io/fluent/fluent-bit
-    # Overrides the image tag whose default is {{ .Chart.AppVersion }}
-    tag: ""
-    pullPolicy: Always
-
-  testFramework:
-    enabled: true
-    image:
-      repository: busybox
-      pullPolicy: Always
-      tag: latest
-
-  imagePullSecrets: []
-  nameOverride: ""
-  fullnameOverride: ""
-
-  serviceAccount:
-    create: true
-    annotations: {}
-    name:
-
-  rbac:
-    create: true
-    nodeAccess: false
-
-  # Configure podsecuritypolicy
-  # Ref: https://kubernetes.io/docs/concepts/policy/pod-security-policy/
-  # from Kubernetes 1.25, PSP is deprecated
-  # See: https://kubernetes.io/blog/2022/08/23/kubernetes-v1-25-release/#pod-security-changes
-  # We automatically disable PSP if Kubernetes version is 1.25 or higher
-  podSecurityPolicy:
-    create: false
-    annotations: {}
-
-  openShift:
-    # Sets Openshift support
-    enabled: false
-    # Creates SCC for Fluent-bit when Openshift support is enabled
-    securityContextConstraints:
-      create: true
-      annotations: {}
-
-  podSecurityContext: {}
-  #   fsGroup: 2000
-
-  hostNetwork: false
-  dnsPolicy: ClusterFirst
-
-  dnsConfig: {}
-  #   nameservers:
-  #     - 1.2.3.4
-  #   searches:
-  #     - ns1.svc.cluster-domain.example
-  #     - my.dns.search.suffix
-  #   options:
-  #     - name: ndots
-  #       value: "2"
-  #     - name: edns0
-
-  hostAliases: []
-  #   - ip: "1.2.3.4"
-  #     hostnames:
-  #     - "foo.local"
-  #     - "bar.local"
-
-  securityContext: {}
-  #   capabilities:
-  #     drop:
-  #     - ALL
-  #   readOnlyRootFilesystem: true
-  #   runAsNonRoot: true
-  #   runAsUser: 1000
-
-  service:
-    type: ClusterIP
-    port: 2020
-    loadBalancerClass:
-    loadBalancerSourceRanges: []
-    labels: {}
-    # nodePort: 30020
-    # clusterIP: 172.16.10.1
-    annotations: {}
-  #   prometheus.io/path: "/api/v1/metrics/prometheus"
-  #   prometheus.io/port: "2020"
-  #   prometheus.io/scrape: "true"
-
-  serviceMonitor:
-    enabled: false
-  #   namespace: monitoring
-  #   interval: 10s
-  #   scrapeTimeout: 10s
-  #   jobLabel: fluentbit
-  #   selector:
-  #    prometheus: my-prometheus
-  #  ## metric relabel configs to apply to samples before ingestion.
-  #  ##
-  #  metricRelabelings:
-  #    - sourceLabels: [__meta_kubernetes_service_label_cluster]
-  #      targetLabel: cluster
-  #      regex: (.*)
-  #      replacement: ${1}
-  #      action: replace
-  #  ## relabel configs to apply to samples after ingestion.
-  #  ##
-  #  relabelings:
-  #    - sourceLabels: [__meta_kubernetes_pod_node_name]
-  #      separator: ;
-  #      regex: ^(.*)$
-  #      targetLabel: nodename
-  #      replacement: $1
-  #      action: replace
-  #  scheme: ""
-  #  tlsConfig: {}
-
-  prometheusRule:
-    enabled: false
-  #   namespace: ""
-  #   additionalLabels: {}
-  #   rules:
-  #   - alert: NoOutputBytesProcessed
-  #     expr: rate(fluentbit_output_proc_bytes_total[5m]) == 0
-  #     annotations:
-  #       message: |
-  #         Fluent Bit instance {{ $labels.instance }}'s output plugin {{ $labels.name }} has not processed any
-  #         bytes for at least 15 minutes.
-  #       summary: No Output Bytes Processed
-  #     for: 15m
-  #     labels:
-  #       severity: critical
-
-  dashboards:
-    enabled: false
-    labelKey: grafana_dashboard
-    annotations: {}
-    namespace: ""
-
-  lifecycle: {}
-    # preStop:
-    #   exec:
-    #     command: ["/bin/sh", "-c", "sleep 20"]
-
-  livenessProbe:
-    httpGet:
-      path: /
-      port: http
-
-  readinessProbe:
-    httpGet:
-      path: /api/v1/health
-      port: http
-
-  resources: {}
-  #   limits:
-  #     cpu: 100m
-  #     memory: 128Mi
-  #   requests:
-  #     cpu: 100m
-  #     memory: 128Mi
-
-  ## only available if kind is Deployment
-  ingress:
-    enabled: false
-    className: ""
-    annotations: {}
-      # kubernetes.io/ingress.class: nginx
-      # kubernetes.io/tls-acme: "true"
-    hosts: []
-    # - host: fluent-bit.example.tld
-    extraHosts: []
-    # - host: fluent-bit-extra.example.tld
-        ## specify extraPort number
-    #   port: 5170
-    tls: []
-    #  - secretName: fluent-bit-example-tld
-    #    hosts:
-    #      - fluent-bit.example.tld
-
-  ## only available if kind is Deployment
-  autoscaling:
-    enabled: false
-    minReplicas: 1
-    maxReplicas: 3
-    targetCPUUtilizationPercentage: 75
-  #  targetMemoryUtilizationPercentage: 75
-    ## see https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale-walkthrough/#autoscaling-on-multiple-metrics-and-custom-metrics
-    customRules: []
-  #     - type: Pods
-  #       pods:
-  #         metric:
-  #           name: packets-per-second
-  #         target:
-  #           type: AverageValue
-  #           averageValue: 1k
-      ## see https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/#support-for-configurable-scaling-behavior
-    behavior: {}
-  #      scaleDown:
-  #        policies:
-  #          - type: Pods
-  #            value: 4
-  #            periodSeconds: 60
-  #          - type: Percent
-  #            value: 10
-  #            periodSeconds: 60
-
-  ## only available if kind is Deployment
-  podDisruptionBudget:
-    enabled: false
-    annotations: {}
-    maxUnavailable: "30%"
-
-  nodeSelector: {}
-
-  tolerations: []
-
-  affinity: {}
-
-  labels: {}
-
-  annotations: {}
-
-  podAnnotations: {}
-
-  podLabels: {}
-
-  ## How long (in seconds) a pods needs to be stable before progressing the deployment
-  ##
-  minReadySeconds:
-
-  ## How long (in seconds) a pod may take to exit (useful with lifecycle hooks to ensure lb deregistration is done)
-  ##
-  terminationGracePeriodSeconds:
-
-  priorityClassName: ""
-
-  env: []
-  #  - name: FOO
-  #    value: "bar"
-
-  # The envWithTpl array below has the same usage as "env", but is using the tpl function to support templatable string.
-  # This can be useful when you want to pass dynamic values to the Chart using the helm argument "--set <variable>=<value>"
-  # https://helm.sh/docs/howto/charts_tips_and_tricks/#using-the-tpl-function
-  envWithTpl: []
-  #  - name: FOO_2
-  #    value: "{{ .Values.foo2 }}"
-  #
-  # foo2: bar2
-
-  envFrom: []
-
-  extraContainers: []
-  #   - name: do-something
-  #     image: busybox
-  #     command: ['do', 'something']
-
-  flush: 1
-
-  metricsPort: 2020
-
-  extraPorts: []
-  #   - port: 5170
-  #     containerPort: 5170
-  #     protocol: TCP
-  #     name: tcp
-  #     nodePort: 30517
-
-  extraVolumes: []
-
-  extraVolumeMounts: []
-
-  updateStrategy: {}
-  #   type: RollingUpdate
-  #   rollingUpdate:
-  #     maxUnavailable: 1
-
-  # Make use of a pre-defined configmap instead of the one templated here
-  existingConfigMap: ""
-
-  networkPolicy:
-    enabled: false
-  #   ingress:
-  #     from: []
-
-  luaScripts: {}
-
-  ## https://docs.fluentbit.io/manual/administration/configuring-fluent-bit/classic-mode/configuration-file
-  config:
-    service: |
-      [SERVICE]
-          Daemon Off
-          Flush {{ .Values.flush }}
-          Log_Level {{ .Values.logLevel }}
-          Parsers_File parsers.conf
-          Parsers_File custom_parsers.conf
-          HTTP_Server On
-          HTTP_Listen 0.0.0.0
-          HTTP_Port {{ .Values.metricsPort }}
-          Health_Check On
-
-    ## https://docs.fluentbit.io/manual/pipeline/inputs
-    inputs: |
-      # Blacklist Mode
-      # [INPUT]
-      #     Name tail
-      #     Exclude_Path     /var/log/containers/*fluent-bit*,/var/log/containers/*mo-tp-cn*
-      #     Path             /var/log/containers/*.log
-      #     multiline.parser docker, cri, go
-      #     Tag kube.*
-      #     Mem_Buf_Limit 5MB
-      #     Skip_Long_Lines On
-      #     Refresh_Interval  10
-      #
-      # Whitelist Mode
-      [INPUT]
-          Name tail
-          Path /var/log/containers/*.log
-          multiline.parser docker, cri
-          Tag kube.*
-          Mem_Buf_Limit 5MB
-          Skip_Long_Lines On
-
-      [INPUT]
-          Name systemd
-          Tag host.*
-          Systemd_Filter _SYSTEMD_UNIT=kubelet.service
-          Read_From_Tail On
-
-    ## https://docs.fluentbit.io/manual/pipeline/filters
-    filters: |
-      # filter for k8s
-      [FILTER]
-          Name kubernetes
-          Match kube.*
-          Merge_Log On
-          Keep_Log Off
-          K8S-Logging.Parser On
-          K8S-Logging.Exclude On
-      # pick below "wildcard" field to parse, others move to "extra"
-      [FILTER]
-          Name nest
-          Match kube.*
-          Operation nest
-          Wildcard log
-          Wildcard msg
-          Wildcard time
-          Wildcard status
-          Wildcard stacktrace
-          Wildcard kubernetes
-          Wildcard level
-          Nested_under moob_fluentbit_extra
-      [FILTER]
-          Name nest
-          Match kube.*
-          Operation nest
-          Wildcard *
-          Nest_under extra
-      [FILTER]
-          Name nest
-          Match kube.*
-          Operation lift
-          Nested_under extra
-          Add_prefix Lifted_
-      [FILTER]
-          Name nest
-          Match kube.*
-          Operation lift
-          Nested_under Lifted_moob_fluentbit_extra
-      [FILTER]
-          name nest
-          Match kube.*
-          Operation lift
-      [FILTER]
-          Name nest
-          Match kube.*
-          Operation nest
-          Wildcard Lifted_*
-          Nested_under extra
-          Remove_prefix Lifted_
-      [FILTER]
-          Name nest
-          Match kube.*
-          Operation lift
-          Nested_under kubernetes
-          Add_prefix k8s_
-      [FILTER]
-          Name                modify
-          Match               kube.*
-          Copy                k8s_namespace_name          service_name
-          Copy                k8s_container_name             app_name
-      [FILTER]
-          Name nest
-          Match kube.*
-          Operation nest
-          Wildcard k8s_*
-          Nested_under kubernetes
-          Remove_prefix k8s_
-      # filter for syslog
-      [FILTER]
-          Name                modify
-          Match               dataplane.systemd.*
-          Rename              _HOSTNAME                   hostname
-          Add                 service_name                dataplane_systemd
-          Copy                _SYSTEMD_UNIT               app_name
-          Rename              _SYSTEMD_UNIT               systemd_unit
-          Rename              MESSAGE                     message
-          Remove_regex        ^((?!hostname|systemd_unit|service_name|app_name|message).)*$
-
-      [FILTER]
-          Name                modify
-          Match               host.dmesg
-          Add   service_name  syslog
-          Add   app_name      dmesg
-
-      [FILTER]
-          Name                modify
-          Match               host.messages
-          Add   service_name  syslog
-          Add   app_name      messages
-      [FILTER]
-          Name                modify
-          Match               host.secure
-          Add   service_name  syslog
-          Add   app_name      secure
-
-    ## https://docs.fluentbit.io/manual/pipeline/outputs
-    outputs: |
-      [OUTPUT]
-          Name es
-          Match kube.*
-          Host elasticsearch-master
-          Logstash_Format On
-          Retry_Limit False
-
-    ## https://docs.fluentbit.io/manual/administration/configuring-fluent-bit/classic-mode/upstream-servers
-    ## This configuration is deprecated, please use `extraFiles` instead.
-    upstream: {}
-
-    ## https://docs.fluentbit.io/manual/pipeline/parsers
-    customParsers: |
-      [PARSER]
-          Name docker_no_time
-          Format json
-          Time_Keep Off
-          Time_Key time
-          Time_Format %Y-%m-%dT%H:%M:%S.%L
-      [PARSER]
-          Name                syslog
-          Format              regex
-          Regex               ^(?<time>[^ ]* {1,2}[^ ]* [^ ]*) (?<host>[^ ]*) (?<ident>[a-zA-Z0-9_\/\.\-]*)(?:\[(?<pid>[0-9]+)\])?(?:[^\:]*\:)? *(?<message>.*)$
-          Time_Key            time
-          Time_Format         %b %d %H:%M:%S
-      [PARSER]
-          Name                container_firstline
-          Format              regex
-          Regex               (?<log>(?<="log":")\S(?!\.).*?)(?<!\\)".*(?<stream>(?<="stream":").*?)".*(?<time>\d{4}-\d{1,2}-\d{1,2}T\d{2}:\d{2}:\d{2}\.\w*).*(?=})
-          Time_Key            time
-          Time_Format         %Y-%m-%dT%H:%M:%S.%LZ
-
-    # This allows adding more files with arbitary filenames to /fluent-bit/etc by providing key/value pairs.
-    # The key becomes the filename, the value becomes the file content.
-    extraFiles: {}
-  #     upstream.conf: |
-  #       [UPSTREAM]
-  #           upstream1
-  #
-  #       [NODE]
-  #           name       node-1
-  #           host       127.0.0.1
-  #           port       43000
-  #     example.conf: |
-  #       [OUTPUT]
-  #           Name example
-  #           Match foo.*
-  #           Host bar
-
-  # The config volume is mounted by default, either to the existingConfigMap value, or the default of "fluent-bit.fullname"
-  volumeMounts:
-    - name: config
-      mountPath: /fluent-bit/etc/fluent-bit.conf
-      subPath: fluent-bit.conf
-    - name: config
-      mountPath: /fluent-bit/etc/custom_parsers.conf
-      subPath: custom_parsers.conf
-
-  daemonSetVolumes:
-    - name: varlog
-      hostPath:
-        path: /var/log
-    - name: varlibdockercontainers
-      hostPath:
-        path: /var/lib/docker/containers
-    - name: etcmachineid
-      hostPath:
-        path: /etc/machine-id
-        type: File
-
-  daemonSetVolumeMounts:
-    - name: varlog
-      mountPath: /var/log
-    - name: varlibdockercontainers
-      mountPath: /var/lib/docker/containers
-      readOnly: true
-    - name: etcmachineid
-      mountPath: /etc/machine-id
-      readOnly: true
-
-  args: []
-
-  command: []
-
-  # This supports either a structured array or a templatable string
-  initContainers: []
-  # Array mode
-  # initContainers:
-  #   - name: do-something
-  #     image: bitnami/kubectl:1.22
-  #     command: ['kubectl', 'version']
-
-  # String mode
-  # initContainers: |-
-  #   - name: do-something
-  #     image: bitnami/kubectl:{{ .Capabilities.KubeVersion.Major }}.{{ .Capabilities.KubeVersion.Minor }}
-  #     command: ['kubectl', 'version']
-
-  logLevel: info
-
+## default value https://github.com/prometheus-community/helm-charts/blob/main/charts/kube-prometheus-stack/values.yaml
 prometheus:
   enabled: true
-
-  rbac:
-    create: true
-
-  podSecurityPolicy:
+  global:
+    ## How frequently to scrape targets by default
+    ##
+    scrape_interval: 1m
+    ## How long until a scrape request times out
+    ##
+    scrape_timeout: 10s
+    ## How frequently to evaluate rules
+    ##
+    evaluation_interval: 1m
+  replicaCount: 1
+  alertmanager:
     enabled: false
 
-  imagePullSecrets:
-  # - name: "image-pull-secret"
+  prometheus-pushgateway:
+    enabled: false
 
-  ## Define serviceAccount names for components. Defaults to component's fully qualified name.
-  ##
-  serviceAccounts:
-    server:
-      create: true
-      name:
-      annotations: {}
+  kube-state-metrics:
+    enabled: true
 
-  ## Monitors ConfigMap changes and POSTs to a URL
-  ## Ref: https://github.com/jimmidyson/configmap-reload
-  ##
-  configmapReload:
-    prometheus:
-      ## If false, the configmap-reload container will not be deployed
-      ##
-      enabled: true
-
-      ## configmap-reload container name
-      ##
-      name: configmap-reload
-
-      ## configmap-reload container image
-      ##
-      image:
-        repository: jimmidyson/configmap-reload
-        tag: v0.8.0
-        pullPolicy: IfNotPresent
-
-      # containerPort: 9533
-
-      ## Additional configmap-reload container arguments
-      ##
-      extraArgs: {}
-      ## Additional configmap-reload volume directories
-      ##
-      extraVolumeDirs: []
-
-
-      ## Additional configmap-reload mounts
-      ##
-      extraConfigmapMounts: []
-        # - name: prometheus-alerts
-        #   mountPath: /etc/alerts.d
-        #   subPath: ""
-        #   configMap: prometheus-alerts
-        #   readOnly: true
-
-      ## Security context to be added to configmap-reload container
-      containerSecurityContext: {}
-
-      ## configmap-reload resource requests and limits
-      ## Ref: http://kubernetes.io/docs/user-guide/compute-resources/
-      ##
-      resources: {}
+  prometheus-node-exporter:
+    enabled: true
+    extraArgs:
+    - --collector.disable-defaults
+    - --collector.arp
+    - --collector.conntrack
+    - --collector.cpu
+    - --collector.diskstats
+    - --collector.filefd
+    - --collector.loadavg
+    - --collector.meminfo
+    - --collector.netstat
+    - --collector.nvme
+    - --collector.pressure
+    - --collector.schedstat
+    - --collector.sockstat
+    - --collector.softnet
+    - --collector.stat
+    - --collector.udp_queues
+    - --collector.vmstat
+    - --collector.xfs
+    - --collector.uname
+    - --collector.filesystem.mount-points-exclude=^/(dev|proc|sys|var/lib/docker/.+|var/lib/kubelet/.+)($|/)
+    - --collector.filesystem.fs-types-exclude=^(autofs|binfmt_misc|bpf|cgroup2?|configfs|debugfs|devpts|devtmpfs|fusectl|hugetlbfs|iso9660|mqueue|nsfs|overlay|proc|procfs|pstore|rpc_pipefs|securityfs|selinuxfs|squashfs|sysfs|tracefs)$
 
   server:
-    ## Prometheus server container name
-    ##
-    name: server
-
-    ## Use a ClusterRole (and ClusterRoleBinding)
-    ## - If set to false - we define a RoleBinding in the defined namespaces ONLY
-    ##
-    ## NB: because we need a Role with nonResourceURL's ("/metrics") - you must get someone with Cluster-admin privileges to define this role for you, before running with this setting enabled.
-    ##     This makes prometheus work - for users who do not have ClusterAdmin privs, but wants prometheus to operate on their own namespaces, instead of clusterwide.
-    ##
-    ## You MUST also set namespaces to the ones you have access to and want monitored by Prometheus.
-    ##
-    # useExistingClusterRoleName: nameofclusterrole
-
-    ## namespaces to monitor (instead of monitoring all - clusterwide). Needed if you want to run without Cluster-admin privileges.
-    # namespaces:
-    #   - yournamespace
-
-    # sidecarContainers - add more containers to prometheus server
-    # Key/Value where Key is the sidecar `- name: <Key>`
-    # Example:
-    #   sidecarContainers:
-    #      webserver:
-    #        image: nginx
-    sidecarContainers: {}
-
-    # sidecarTemplateValues - context to be used in template for sidecarContainers
-    # Example:
-    #   sidecarTemplateValues: *your-custom-globals
-    #   sidecarContainers:
-    #     webserver: |-
-    #       {{ include "webserver-container-template" . }}
-    # Template for `webserver-container-template` might looks like this:
-    #   image: "{{ .Values.server.sidecarTemplateValues.repository }}:{{ .Values.server.sidecarTemplateValues.tag }}"
-    #   ...
-    #
-    sidecarTemplateValues: {}
-
-    ## Prometheus server container image
-    ##
-    image:
-      repository: quay.io/prometheus/prometheus
-      # if not set appVersion field from Chart.yaml is used
-      tag: ""
-      pullPolicy: IfNotPresent
-
-    ## prometheus server priorityClassName
-    ##
-    priorityClassName: ""
-
-    ## EnableServiceLinks indicates whether information about services should be injected
-    ## into pod's environment variables, matching the syntax of Docker links.
-    ## WARNING: the field is unsupported and will be skipped in K8s prior to v1.13.0.
-    ##
-    enableServiceLinks: true
-
-    ## The URL prefix at which the container can be accessed. Useful in the case the '-web.external-url' includes a slug
-    ## so that the various internal URLs are still able to access as they are in the default case.
-    ## (Optional)
-    prefixURL: ""
-
-    ## External URL which can access prometheus
-    ## Maybe same with Ingress host name
-    baseURL: ""
-
-    ## Additional server container environment variables
-    ##
-    ## You specify this manually like you would a raw deployment manifest.
-    ## This means you can bind in environment variables from secrets.
-    ##
-    ## e.g. static environment variable:
-    ##  - name: DEMO_GREETING
-    ##    value: "Hello from the environment"
-    ##
-    ## e.g. secret environment variable:
-    ## - name: USERNAME
-    ##   valueFrom:
-    ##     secretKeyRef:
-    ##       name: mysecret
-    ##       key: username
-    env: []
-
-    # List of flags to override default parameters, e.g:
-    # - --enable-feature=agent
-    # - --storage.agent.retention.max-time=30m
-    defaultFlagsOverride: []
-
+    defaultFlagsOverride:
+      [
+        "--enable-feature=agent",
+        "--storage.agent.retention.max-time=30m",
+        "--storage.agent.path=/prometheus",
+        # "--config.file=/etc/prometheus/config_out/prometheus.env.yaml",
+        "--config.file=/etc/config/prometheus.yml",
+      ]
     extraFlags:
       - web.enable-lifecycle
-      ## web.enable-admin-api flag controls access to the administrative HTTP API which includes functionality such as
-      ## deleting time series. This is disabled by default.
-      # - web.enable-admin-api
-      ##
-      ## storage.tsdb.no-lockfile flag controls BD locking
-      # - storage.tsdb.no-lockfile
-      ##
-      ## storage.tsdb.wal-compression flag enables compression of the write-ahead log (WAL)
-      # - storage.tsdb.wal-compression
+    remoteWrite: 
+      - url: "http://mo-agent-service.mo-ob:8000/v1/metrics"
 
-    ## Path to a configuration file on prometheus server container FS
-    configPath: /etc/config/prometheus.yml
-
-    ### The data directory used by prometheus to set --storage.tsdb.path
-    ### When empty server.persistentVolume.mountPath is used instead
-    storagePath: ""
-
-    global:
-      ## How frequently to scrape targets by default
-      ##
-      scrape_interval: 1m
-      ## How long until a scrape request times out
-      ##
-      scrape_timeout: 10s
-      ## How frequently to evaluate rules
-      ##
-      evaluation_interval: 1m
-    ## https://prometheus.io/docs/prometheus/latest/configuration/configuration/#remote_write
-    ##
-    remoteWrite: []
-    ## https://prometheus.io/docs/prometheus/latest/configuration/configuration/#remote_read
-    ##
-    remoteRead: []
-
-    ## Custom HTTP headers for Liveness/Readiness/Startup Probe
-    ##
-    ## Useful for providing HTTP Basic Auth to healthchecks
-    probeHeaders: []
-      # - name: "Authorization"
-      #   value: "Bearer ABCDEabcde12345"
-
-    ## Additional Prometheus server container arguments
-    ##
-    extraArgs: {}
-
-    ## Additional InitContainers to initialize the pod
-    ##
-    extraInitContainers: []
-
-    ## Additional Prometheus server Volume mounts
-    ##
-    extraVolumeMounts: []
-
-    ## Additional Prometheus server Volumes
-    ##
-    extraVolumes: []
-
-    ## Additional Prometheus server hostPath mounts
-    ##
-    extraHostPathMounts: []
-      # - name: certs-dir
-      #   mountPath: /etc/kubernetes/certs
-      #   subPath: ""
-      #   hostPath: /etc/kubernetes/certs
-      #   readOnly: true
-
-    extraConfigmapMounts: []
-      # - name: certs-configmap
-      #   mountPath: /prometheus
-      #   subPath: ""
-      #   configMap: certs-configmap
-      #   readOnly: true
-
-    ## Additional Prometheus server Secret mounts
-    # Defines additional mounts with secrets. Secrets must be manually created in the namespace.
-    extraSecretMounts: []
-      # - name: secret-files
-      #   mountPath: /etc/secrets
-      #   subPath: ""
-      #   secretName: prom-secret-files
-      #   readOnly: true
-
-    ## ConfigMap override where fullname is {{.Release.Name}}-{{.Values.server.configMapOverrideName}}
-    ## Defining configMapOverrideName will cause templates/server-configmap.yaml
-    ## to NOT generate a ConfigMap resource
-    ##
-    configMapOverrideName: ""
-
-    ## Extra labels for Prometheus server ConfigMap (ConfigMap that holds serverFiles)
-    extraConfigmapLabels: {}
-
-    ingress:
-      ## If true, Prometheus server Ingress will be created
-      ##
-      enabled: false
-
-      # For Kubernetes >= 1.18 you should specify the ingress-controller via the field ingressClassName
-      # See https://kubernetes.io/blog/2020/04/02/improvements-to-the-ingress-api-in-kubernetes-1.18/#specifying-the-class-of-an-ingress
-      # ingressClassName: nginx
-
-      ## Prometheus server Ingress annotations
-      ##
-      annotations: {}
-      #   kubernetes.io/ingress.class: nginx
-      #   kubernetes.io/tls-acme: 'true'
-
-      ## Prometheus server Ingress additional labels
-      ##
-      extraLabels: {}
-
-      ## Prometheus server Ingress hostnames with optional path
-      ## Must be provided if Ingress is enabled
-      ##
-      hosts: []
-      #   - prometheus.domain.com
-      #   - domain.com/prometheus
-
-      path: /
-
-      # pathType is only for k8s >= 1.18
-      pathType: Prefix
-
-      ## Extra paths to prepend to every host configuration. This is useful when working with annotation based services.
-      extraPaths: []
-      # - path: /*
-      #   backend:
-      #     serviceName: ssl-redirect
-      #     servicePort: use-annotation
-
-      ## Prometheus server Ingress TLS configuration
-      ## Secrets must be manually created in the namespace
-      ##
-      tls: []
-      #   - secretName: prometheus-server-tls
-      #     hosts:
-      #       - prometheus.domain.com
-
-    ## Server Deployment Strategy type
-    strategy:
-      type: Recreate
-
-    ## hostAliases allows adding entries to /etc/hosts inside the containers
-    hostAliases: []
-    #   - ip: "127.0.0.1"
-    #     hostnames:
-    #       - "example.com"
-
-    ## Node tolerations for server scheduling to nodes with taints
-    ## Ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/
-    ##
-    tolerations: []
-      # - key: "key"
-      #   operator: "Equal|Exists"
-      #   value: "value"
-      #   effect: "NoSchedule|PreferNoSchedule|NoExecute(1.6 only)"
-
-    ## Node labels for Prometheus server pod assignment
-    ## Ref: https://kubernetes.io/docs/user-guide/node-selection/
-    ##
-    nodeSelector: {}
-
-    ## Pod affinity
-    ##
-    affinity: {}
-
-    ## PodDisruptionBudget settings
-    ## ref: https://kubernetes.io/docs/concepts/workloads/pods/disruptions/
-    ##
-    podDisruptionBudget:
-      enabled: false
-      maxUnavailable: 1
-
-    ## Use an alternate scheduler, e.g. "stork".
-    ## ref: https://kubernetes.io/docs/tasks/administer-cluster/configure-multiple-schedulers/
-    ##
-    # schedulerName:
-
-    persistentVolume:
-      ## If true, Prometheus server will create/use a Persistent Volume Claim
-      ## If false, use emptyDir
-      ##
-      enabled: true
-
-      ## Prometheus server data Persistent Volume access modes
-      ## Must match those of existing PV or dynamic provisioner
-      ## Ref: http://kubernetes.io/docs/user-guide/persistent-volumes/
-      ##
-      accessModes:
-        - ReadWriteOnce
-
-      ## Prometheus server data Persistent Volume labels
-      ##
-      labels: {}
-
-      ## Prometheus server data Persistent Volume annotations
-      ##
-      annotations: {}
-
-      ## Prometheus server data Persistent Volume existing claim name
-      ## Requires server.persistentVolume.enabled: true
-      ## If defined, PVC must be created manually before volume will be bound
-      existingClaim: ""
-
-      ## Prometheus server data Persistent Volume mount root path
-      ##
-      mountPath: /data
-
-      ## Prometheus server data Persistent Volume size
-      ##
-      size: 8Gi
-
-      ## Prometheus server data Persistent Volume Storage Class
-      ## If defined, storageClassName: <storageClass>
-      ## If set to "-", storageClassName: "", which disables dynamic provisioning
-      ## If undefined (the default) or set to null, no storageClassName spec is
-      ##   set, choosing the default provisioner.  (gp2 on AWS, standard on
-      ##   GKE, AWS & OpenStack)
-      ##
-      # storageClass: "-"
-
-      ## Prometheus server data Persistent Volume Binding Mode
-      ## If defined, volumeBindingMode: <volumeBindingMode>
-      ## If undefined (the default) or set to null, no volumeBindingMode spec is
-      ##   set, choosing the default mode.
-      ##
-      # volumeBindingMode: ""
-
-      ## Subdirectory of Prometheus server data Persistent Volume to mount
-      ## Useful if the volume's root directory is not empty
-      ##
-      subPath: ""
-
-      ## Persistent Volume Claim Selector
-      ## Useful if Persistent Volumes have been provisioned in advance
-      ## Ref: https://kubernetes.io/docs/concepts/storage/persistent-volumes/#selector
-      ##
-      # selector:
-      #  matchLabels:
-      #    release: "stable"
-      #  matchExpressions:
-      #    - { key: environment, operator: In, values: [ dev ] }
-
-      ## Persistent Volume Name
-      ## Useful if Persistent Volumes have been provisioned in advance and you want to use a specific one
-      ##
-      # volumeName: ""
-
-    emptyDir:
-      ## Prometheus server emptyDir volume size limit
-      ##
-      sizeLimit: ""
-
-    ## Annotations to be added to Prometheus server pods
-    ##
-    podAnnotations: {}
-      # iam.amazonaws.com/role: prometheus
-
-    ## Labels to be added to Prometheus server pods
-    ##
-    podLabels: {}
-
-    ## Prometheus AlertManager configuration
-    ##
-    alertmanagers: []
-
-    ## Specify if a Pod Security Policy for node-exporter must be created
-    ## Ref: https://kubernetes.io/docs/concepts/policy/pod-security-policy/
-    ##
-    podSecurityPolicy:
-      annotations: {}
-        ## Specify pod annotations
-        ## Ref: https://kubernetes.io/docs/concepts/policy/pod-security-policy/#apparmor
-        ## Ref: https://kubernetes.io/docs/concepts/policy/pod-security-policy/#seccomp
-        ## Ref: https://kubernetes.io/docs/concepts/policy/pod-security-policy/#sysctl
-        ##
-        # seccomp.security.alpha.kubernetes.io/allowedProfileNames: '*'
-        # seccomp.security.alpha.kubernetes.io/defaultProfileName: 'docker/default'
-        # apparmor.security.beta.kubernetes.io/defaultProfileName: 'runtime/default'
-
-    ## Use a StatefulSet if replicaCount needs to be greater than 1 (see below)
-    ##
-    replicaCount: 1
-
-    ## Annotations to be added to deployment
-    ##
-    deploymentAnnotations: {}
-
-    statefulSet:
-      ## If true, use a statefulset instead of a deployment for pod management.
-      ## This allows to scale replicas to more than 1 pod
-      ##
-      enabled: false
-
-      annotations: {}
-      labels: {}
-      podManagementPolicy: OrderedReady
-
-      ## Alertmanager headless service to use for the statefulset
-      ##
-      headless:
-        annotations: {}
-        labels: {}
-        servicePort: 80
-        ## Enable gRPC port on service to allow auto discovery with thanos-querier
-        gRPC:
-          enabled: false
-          servicePort: 10901
-          # nodePort: 10901
-
-    ## Prometheus server readiness and liveness probe initial delay and timeout
-    ## Ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
-    ##
-    tcpSocketProbeEnabled: false
-    probeScheme: HTTP
-    readinessProbeInitialDelay: 30
-    readinessProbePeriodSeconds: 5
-    readinessProbeTimeout: 4
-    readinessProbeFailureThreshold: 3
-    readinessProbeSuccessThreshold: 1
-    livenessProbeInitialDelay: 30
-    livenessProbePeriodSeconds: 15
-    livenessProbeTimeout: 10
-    livenessProbeFailureThreshold: 3
-    livenessProbeSuccessThreshold: 1
-    startupProbe:
-      enabled: false
-      periodSeconds: 5
-      failureThreshold: 30
-      timeoutSeconds: 10
-
-    ## Prometheus server resource requests and limits
-    ## Ref: http://kubernetes.io/docs/user-guide/compute-resources/
-    ##
-    resources: {}
-      # limits:
-      #   cpu: 500m
-      #   memory: 512Mi
-      # requests:
-      #   cpu: 500m
-      #   memory: 512Mi
-
-    # Required for use in managed kubernetes clusters (such as AWS EKS) with custom CNI (such as calico),
-    # because control-plane managed by AWS cannot communicate with pods' IP CIDR and admission webhooks are not working
-    ##
-    hostNetwork: false
-
-    # When hostNetwork is enabled, this will set to ClusterFirstWithHostNet automatically
-    dnsPolicy: ClusterFirst
-
-    # Use hostPort
-    # hostPort: 9090
-
-    ## Vertical Pod Autoscaler config
-    ## Ref: https://github.com/kubernetes/autoscaler/tree/master/vertical-pod-autoscaler
-    verticalAutoscaler:
-      ## If true a VPA object will be created for the controller (either StatefulSet or Deployemnt, based on above configs)
-      enabled: false
-      # updateMode: "Auto"
-      # containerPolicies:
-      # - containerName: 'prometheus-server'
-
-    # Custom DNS configuration to be added to prometheus server pods
-    dnsConfig: {}
-      # nameservers:
-      #   - 1.2.3.4
-      # searches:
-      #   - ns1.svc.cluster-domain.example
-      #   - my.dns.search.suffix
-      # options:
-      #   - name: ndots
-      #     value: "2"
-    #   - name: edns0
-
-    ## Security context to be added to server pods
-    ##
-    securityContext:
-      runAsUser: 65534
-      runAsNonRoot: true
-      runAsGroup: 65534
-      fsGroup: 65534
-
-    ## Security context to be added to server container
-    ##
-    containerSecurityContext: {}
-
-    service:
-      ## If false, no Service will be created for the Prometheus server
-      ##
-      enabled: true
-
-      annotations: {}
-      labels: {}
-      clusterIP: ""
-
-      ## List of IP addresses at which the Prometheus server service is available
-      ## Ref: https://kubernetes.io/docs/user-guide/services/#external-ips
-      ##
-      externalIPs: []
-
-      loadBalancerIP: ""
-      loadBalancerSourceRanges: []
-      servicePort: 80
-      sessionAffinity: None
-      type: ClusterIP
-
-      ## Enable gRPC port on service to allow auto discovery with thanos-querier
-      gRPC:
-        enabled: false
-        servicePort: 10901
-        # nodePort: 10901
-
-      ## If using a statefulSet (statefulSet.enabled=true), configure the
-      ## service to connect to a specific replica to have a consistent view
-      ## of the data.
-      statefulsetReplica:
-        enabled: false
-        replica: 0
-
-    ## Prometheus server pod termination grace period
-    ##
-    terminationGracePeriodSeconds: 300
-
-    ## Prometheus data retention period (default if not specified is 15 days)
-    ##
-    retention: "15d"
-
-  ## Prometheus server ConfigMap entries for rule files (allow prometheus labels interpolation)
-  ruleFiles: {}
-
-  ## Prometheus server ConfigMap entries
-  ##
+  # 这里需要将rule置空，否则报错
   serverFiles:
-    ## Alerts configuration
-    ## Ref: https://prometheus.io/docs/prometheus/latest/configuration/alerting_rules/
-    alerting_rules.yml: {}
-    # groups:
-    #   - name: Instances
-    #     rules:
-    #       - alert: InstanceDown
-    #         expr: up == 0
-    #         for: 5m
-    #         labels:
-    #           severity: page
-    #         annotations:
-    #           description: '{{ $labels.instance }} of job {{ $labels.job }} has been down for more than 5 minutes.'
-    #           summary: 'Instance {{ $labels.instance }} down'
-    ## DEPRECATED DEFAULT VALUE, unless explicitly naming your files, please use alerting_rules.yml
-    alerts: {}
-
-    ## Records configuration
-    ## Ref: https://prometheus.io/docs/prometheus/latest/configuration/recording_rules/
-    recording_rules.yml: {}
-    ## DEPRECATED DEFAULT VALUE, unless explicitly naming your files, please use recording_rules.yml
-    rules: {}
-
     prometheus.yml:
-      rule_files:
-        - /etc/config/recording_rules.yml
-        - /etc/config/alerting_rules.yml
-      ## Below two files are DEPRECATED will be removed from this default values file
-        - /etc/config/rules
-        - /etc/config/alerts
-
+      rule_files: []
       scrape_configs:
         - job_name: prometheus
           static_configs:
             - targets:
               - localhost:9090
 
-        # A scrape configuration for running Prometheus on a Kubernetes cluster.
-        # This uses separate scrape configs for cluster components (i.e. API server, node)
-        # and services to allow each to use different authentication configs.
-        #
-        # Kubernetes labels will be added as Prometheus labels on metrics via the
-        # `labelmap` relabeling action.
-
-        # Scrape config for API servers.
-        #
-        # Kubernetes exposes API servers as endpoints to the default/kubernetes
-        # service so this uses `endpoints` role and uses relabelling to only keep
-        # the endpoints associated with the default/kubernetes service using the
-        # default named port `https`. This works for single API server deployments as
-        # well as HA API server deployments.
-        - job_name: 'kubernetes-apiservers'
-
-          kubernetes_sd_configs:
-            - role: endpoints
-
-          # Default to scraping over https. If required, just disable this or change to
-          # `http`.
-          scheme: https
-
-          # This TLS & bearer token file config is used to connect to the actual scrape
-          # endpoints for cluster components. This is separate to discovery auth
-          # configuration because discovery & scraping are two separate concerns in
-          # Prometheus. The discovery auth config is automatic if Prometheus runs inside
-          # the cluster. Otherwise, more config options have to be provided within the
-          # <kubernetes_sd_config>.
-          tls_config:
-            ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
-            # If your node certificates are self-signed or use a different CA to the
-            # master CA, then disable certificate verification below. Note that
-            # certificate verification is an integral part of a secure infrastructure
-            # so this should only be disabled in a controlled environment. You can
-            # disable certificate verification by uncommenting the line below.
-            #
-            insecure_skip_verify: true
-          bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
-
-          # Keep only the default/kubernetes service endpoints for the https port. This
-          # will add targets for each API server which Kubernetes adds an endpoint to
-          # the default/kubernetes service.
-          relabel_configs:
-            - source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_service_name, __meta_kubernetes_endpoint_port_name]
-              action: keep
-              regex: default;kubernetes;https
+        #- job_name: 'kubernetes-apiservers'
 
         - job_name: 'kubernetes-nodes'
 
@@ -2645,7 +1505,7 @@ prometheus:
           - role: endpoints
           relabel_configs:
           - action: keep
-            regex: mo-cloud
+            regex: "mo-cloud"
             source_labels:
             - __meta_kubernetes_namespace
           - action: replace
@@ -2683,8 +1543,6 @@ prometheus:
             - __meta_kubernetes_pod_node_name
             target_label: node
 
-
-
   # adds additional scrape configs to prometheus.yml
   # must be a string so you have to add a | after extraScrapeConfigs:
   # example adds prometheus-blackbox-exporter scrape config
@@ -2704,81 +1562,232 @@ prometheus:
     #     - target_label: __address__
     #       replacement: prometheus-blackbox-exporter:9115
 
-  # Adds option to add alert_relabel_configs to avoid duplicate alerts in alertmanager
-  # useful in H/A prometheus with different external labels but the same alerts
-  alertRelabelConfigs:
-    # alert_relabel_configs:
-    # - source_labels: [dc]
-    #   regex: (.+)\d+
-    #   target_label: dc
 
-  networkPolicy:
-    ## Enable creation of NetworkPolicy resources.
-    ##
-    enabled: false
+# Extend default values from https://github.com/fluent/helm-charts/blob/main/charts/fluent-bit/values.yaml
+fluent-bit:
+  enabled: true
 
-  # Force namespace of namespaced resources
-  forceNamespace: null
+  # Default values for fluent-bit.
 
-  # Extra manifests to deploy as an array
-  extraManifests: []
-    # - apiVersion: v1
-    #   kind: ConfigMap
-    #   metadata:
-    #   labels:
-    #     name: prometheus-extra
-    #   data:
-    #     extra-data: "value"
+  # kind -- DaemonSet or Deployment
+  kind: DaemonSet
 
-  # Configuration of subcharts defined in Chart.yaml
+  # replicaCount -- Only applicable if kind=Deployment
+  replicaCount: 1
 
-  ## alertmanager sub-chart configurable values
-  ## Please see https://github.com/prometheus-community/helm-charts/tree/main/charts/alertmanager
-  ##
-  alertmanager:
-    ## If false, alertmanager will not be installed
-    ##
-    enabled: true
+  image:
+    repository: cr.fluentbit.io/fluent/fluent-bit
+    # Overrides the image tag whose default is {{ .Chart.AppVersion }}
+    tag: 2.0.8-debug
+    pullPolicy: Always
 
-    persistence:
-      size: 2Gi
+  logLevel: info
 
-    podSecurityContext:
-      runAsUser: 65534
-      runAsNonRoot: true
-      runAsGroup: 65534
-      fsGroup: 65534
+  tolerations:
+    - operator: Exists
 
-  ## kube-state-metrics sub-chart configurable values
-  ## Please see https://github.com/prometheus-community/helm-charts/tree/main/charts/kube-state-metrics
-  ##
-  kube-state-metrics:
-    ## If false, kube-state-metrics sub-chart will not be installed
-    ##
-    enabled: true
+  ## https://docs.fluentbit.io/manual/administration/configuring-fluent-bit/classic-mode/configuration-file
+  config:
+    service: |
+      [SERVICE]
+          Daemon Off
+          Flush {{ .Values.flush }}
+          Log_Level {{ .Values.logLevel }}
+          Parsers_File parsers.conf
+          Parsers_File custom_parsers.conf
+          HTTP_Server On
+          HTTP_Listen 0.0.0.0
+          HTTP_Port {{ .Values.metricsPort }}
+          Health_Check On
 
-  ## promtheus-node-exporter sub-chart configurable values
-  ## Please see https://github.com/prometheus-community/helm-charts/tree/main/charts/prometheus-node-exporter
-  ##
-  prometheus-node-exporter:
-    ## If false, node-exporter will not be installed
-    ##
-    enabled: true
+    ## https://docs.fluentbit.io/manual/pipeline/inputs
+    inputs: |
+      # Whitelist Mode
+      [INPUT]
+          Name tail
+          Path             /var/log/containers/*_cos_*.log,/var/log/containers/*_cos-system_*.log, /var/log/containers/*_mo-cloud_*.log, /var/log/containers/*_mo-system_*.log
+          multiline.parser docker, cri, go 
+          Tag kube.*
+          Mem_Buf_Limit 5MB
+          Skip_Long_Lines Off
+          Refresh_Interval  10
+      [INPUT]
+          Name tail
+          Path             /var/log/containers/*mo-log*.log,/var/log/containers/*mo-dn*.log,/var/log/containers/*mo-cn*.log
+          multiline.parser docker, cri, go 
+          Tag kube.*
+          Mem_Buf_Limit 5MB
+          Skip_Long_Lines Off
+          Refresh_Interval  10
+      [INPUT]
+          Name tail
+          Path             /var/log/containers/*mo-agent-deployment*.log
+          multiline.parser docker, cri, go 
+          Tag kube.*
+          Mem_Buf_Limit 5MB
+          Skip_Long_Lines Off
+          Refresh_Interval  10
+      # host-log
+      [INPUT]
+          Name                tail
+          Tag                 host.dmesg
+          Path                /var/log/dmesg
+          Parser              syslog
+          Mem_Buf_Limit       5MB
+          Skip_Long_Lines     On
+          Refresh_Interval    10
+      [INPUT]
+          Name                tail
+          Tag                 host.messages
+          Path                /var/log/messages
+          Parser              syslog
+          Mem_Buf_Limit       5MB
+          Skip_Long_Lines     On
+          Refresh_Interval    10
+      [INPUT]
+          Name                tail
+          Tag                 host.secure
+          Path                /var/log/secure
+          Parser              syslog
+          # DB                  /var/fluent-bit/state/flb_secure.db
+          Mem_Buf_Limit       5MB
+          Skip_Long_Lines     On
+          Refresh_Interval    10
 
-    rbac:
-      pspEnabled: false
+    ## https://docs.fluentbit.io/manual/pipeline/filters
+    filters: |
+      # filter for k8s
+      [FILTER]
+          Name kubernetes
+          Match kube.*
+          Merge_Log On
+          Keep_Log Off
+          K8S-Logging.Parser On
+          K8S-Logging.Exclude On
+      # pick below "wildcard" field to parse, others move to "extra"
+      [FILTER]
+          Name nest
+          Match kube.*
+          Operation nest
+          Wildcard log
+          Wildcard msg
+          Wildcard time
+          Wildcard status
+          Wildcard stacktrace
+          Wildcard kubernetes
+          Wildcard level
+          Nested_under moob_fluentbit_extra
+      [FILTER]
+          Name nest
+          Match kube.*
+          Operation nest
+          Wildcard *
+          Nest_under extra
+      [FILTER]
+          Name nest
+          Match kube.*
+          Operation lift
+          Nested_under extra
+          Add_prefix Lifted_
+      [FILTER]
+          Name nest
+          Match kube.*
+          Operation lift
+          Nested_under Lifted_moob_fluentbit_extra
+      [FILTER]
+          name nest
+          Match kube.*
+          Operation lift
+      [FILTER]
+          Name nest
+          Match kube.*
+          Operation nest
+          Wildcard Lifted_*
+          Nested_under extra
+          Remove_prefix Lifted_
+      [FILTER]
+          Name nest
+          Match kube.*
+          Operation lift
+          Nested_under kubernetes
+          Add_prefix k8s_
+      [FILTER]
+          Name                modify
+          Match               kube.*
+          Copy                k8s_namespace_name          service_name
+          Copy                k8s_container_name             app_name
+      [FILTER]
+          Name nest
+          Match kube.*
+          Operation nest
+          Wildcard k8s_*
+          Nested_under kubernetes
+          Remove_prefix k8s_
+      # filter for syslog
+      [FILTER]
+          Name                modify
+          Match               dataplane.systemd.*
+          Rename              _HOSTNAME                   hostname
+          Add                 service_name                dataplane_systemd
+          Copy                _SYSTEMD_UNIT               app_name
+          Rename              _SYSTEMD_UNIT               systemd_unit
+          Rename              MESSAGE                     message
+          Remove_regex        ^((?!hostname|systemd_unit|service_name|app_name|message).)*$
 
-    containerSecurityContext:
-      allowPrivilegeEscalation: false
+      [FILTER]
+          Name                modify
+          Match               host.dmesg
+          Add   service_name  syslog
+          Add   app_name      dmesg
 
-  ## pprometheus-pushgateway sub-chart configurable values
-  ## Please see https://github.com/prometheus-community/helm-charts/tree/main/charts/prometheus-pushgateway
-  ##
-  prometheus-pushgateway:
-    ## If false, pushgateway will not be installed
-    ##
-    enabled: true
+      [FILTER]
+          Name                modify
+          Match               host.messages
+          Add   service_name  syslog
+          Add   app_name      messages
+      [FILTER]
+          Name                modify
+          Match               host.secure
+          Add   service_name  syslog
+          Add   app_name      secure
 
-    # Optional service annotations
-    serviceAnnotations:
-      prometheus.io/probe: pushgateway
+    ## https://docs.fluentbit.io/manual/pipeline/outputs
+    outputs: |
+      [OUTPUT]
+          Name  http
+          Match *
+          Host  mo-agent-service.mo-ob
+          Port  8000
+          URI   /v1/logs
+          Format json
+      [OUTPUT]
+          Name stdout
+          Match *
+          # Format json
+          Json_date_key timestamp
+          Json_date_format iso8601
+
+    ## https://docs.fluentbit.io/manual/administration/configuring-fluent-bit/classic-mode/upstream-servers
+    ## This configuration is deprecated, please use `extraFiles` instead.
+    upstream: {}
+
+    ## https://docs.fluentbit.io/manual/pipeline/parsers
+    customParsers: |
+      [PARSER]
+          Name docker_no_time
+          Format json
+          Time_Keep Off
+          Time_Key time
+          Time_Format %Y-%m-%dT%H:%M:%S.%L
+      [PARSER]
+          Name                syslog
+          Format              regex
+          Regex               ^(?<time>[^ ]* {1,2}[^ ]* [^ ]*) (?<host>[^ ]*) (?<ident>[a-zA-Z0-9_\/\.\-]*)(?:\[(?<pid>[0-9]+)\])?(?:[^\:]*\:)? *(?<message>.*)$
+          Time_Key            time
+          Time_Format         %b %d %H:%M:%S
+      [PARSER]
+          Name                container_firstline
+          Format              regex
+          Regex               (?<log>(?<="log":")\S(?!\.).*?)(?<!\\)".*(?<stream>(?<="stream":").*?)".*(?<time>\d{4}-\d{1,2}-\d{1,2}T\d{2}:\d{2}:\d{2}\.\w*).*(?=})
+          Time_Key            time
+          Time_Format         %Y-%m-%dT%H:%M:%S.%LZ
