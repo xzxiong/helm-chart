@@ -138,7 +138,7 @@ alertmanager:
     secretName: alertmanager-secret
     readOnly: true
 
-  resources: {}
+  resources:
     limits:
       cpu: 100m
       memory: 128Mi

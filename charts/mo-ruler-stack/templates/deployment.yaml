@@ -98,3 +98,4 @@ spec:
           secretName: {{ .secretName }}
           defaultMode: {{ .defaultMode }}
       {{- end }}
+      {{- end }}
