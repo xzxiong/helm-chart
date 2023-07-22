@@ -2,9 +2,10 @@ moAgent:
   replicaCount: 1
   image:
     containerName: mo-agent
-    pullPolicy: IfNotPresent
-    repository: matrixone-cloud/observability
-    tag: mo-agent-local
+    repository: matrixorigin/observability
+    pullPolicy: Always
+    # Overrides the image tag whose default is the chart appVersion.
+    tag: "0.9.0-alpha.1"
   nameOverride: ""
   fullnameOverride: ""
   agentSpec:
@@ -15,6 +16,27 @@ moAgent:
       maxSize:
       maxDays:
       maxBackups:
+
+    general:
+      shortTable: false
+      retention:
+        # 默认不关闭定期删除
+        retentionDisabled: false
+        deleteInterval: "1h"
+        onceDeleteLimit: 10000
+        logRetentionPeriod: "336h"        # 保留 14天
+        metricRetentionPeriod: "336h"        # 保留 14天
+        traceRetentionPeriod: "336h"        # 保留 14天
+
+    server:
+      host: localhost
+      port: 8000
+      privateKeyFile:
+      publicKeyFile:
+      tokenEffectiveTime: 2
+      certPath:
+      mode: playground
+
     mo:
       host: matrixone.xiezexiong
       #host: mo-tp-cn.xiezexiong
@@ -25,6 +47,7 @@ moAgent:
       maxOpens: 5
       maxIdles: -1
       initPingCnt: 60
+
     app:
       uuid: 8f0e5ef6de8fe306d772fba5d29e75e8
       account: sys

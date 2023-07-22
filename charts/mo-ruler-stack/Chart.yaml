@@ -1,6 +1,9 @@
 apiVersion: v2
 name: mo-ruler-stack
 description: MO-Ruler's Helm chart for Kubernetes
+type: application
+version: 0.9.1-alpha.1
+appVersion: 0.9.0
 dependencies:
 - condition: alertmanager.enabled
   name: alertmanager
@@ -10,6 +13,3 @@ dependencies:
   name: grafana
   repository: https://grafana.github.io/helm-charts
   version: 6.47.*
-version: 0.9.1-alpha.1
-type: application
-appVersion: "0.9.0"

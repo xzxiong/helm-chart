@@ -48,6 +48,14 @@ moAgent:
       maxBackups:
     general:
       shortTable: false
+      retention:
+        # 默认不关闭定期删除
+        retentionDisabled: false
+        deleteInterval: "1h"
+        onceDeleteLimit: 10000
+        logRetentionPeriod: "336h"        # 保留 14天
+        metricRetentionPeriod: "336h"        # 保留 14天
+        traceRetentionPeriod: "336h"        # 保留 14天
     server:
       host: localhost
       port: 8000
@@ -59,9 +67,10 @@ moAgent:
     mo:
       # valid value in [ cfg, env, cluster ], default: cfg.
       type: cfg
+      secret:
+      host: 127.0.0.1
       labels:
         matrixone.cloud/role: observability
-      host: mo-tp-cn.<mo-namespace>
       port: 6001
       user: dump
       password: 111
@@ -69,6 +78,8 @@ moAgent:
       maxOpens: 5
       maxIdles: -1
       initPingCnt: 60
+      # default: 1 GB
+      maxAllowedPacket: 134217728
     app:
       uuid: 8f0e5ef6de8fe306d772fba5d29e75e8
       account: sys

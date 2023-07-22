@@ -11,8 +11,16 @@ data:
       maxSize: {{ .Values.moAgent.agentSpec.log.maxSize }}
       maxDays: {{ .Values.moAgent.agentSpec.log.maxDays }}
       maxBackups: {{ .Values.moAgent.agentSpec.log.maxBackups }}
+      
     general:
       shortTable: {{ .Values.moAgent.agentSpec.general.shortTable }}
+      retention:
+        retentionDisabled: {{ .Values.moAgent.agentSpec.general.retention.retentionDisabled }}
+        deleteInterval: {{ .Values.moAgent.agentSpec.general.retention.deleteInterval }}
+        onceDeleteLimit: {{ .Values.moAgent.agentSpec.general.retention.onceDeleteLimit }}
+        logRetentionPeriod: {{ .Values.moAgent.agentSpec.general.retention.logRetentionPeriod }}        
+        metricRetentionPeriod: {{ .Values.moAgent.agentSpec.general.retention.metricRetentionPeriod }}
+        traceRetentionPeriod: {{ .Values.moAgent.agentSpec.general.retention.traceRetentionPeriod }}     
     agent: 
       server:
         host: {{ .Values.moAgent.agentSpec.server.host }}

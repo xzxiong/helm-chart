@@ -11,8 +11,6 @@ data:
       maxSize: {{ .Values.moRuler.rulerSpec.log.maxSize }}
       maxDays: {{ .Values.moRuler.rulerSpec.log.maxDays }}
       maxBackups: {{ .Values.moRuler.rulerSpec.log.maxBackups }}
-    general:
-      shortTable: {{ .Values.moRuler.rulerSpec.general.shortTable }}
     ruler:
       rule:
         ruleType: {{ .Values.moRuler.rulerSpec.ruler.rule.ruleType }}
