@@ -14,6 +14,7 @@ spec:
       labels:
         app: mo-agent
     spec:
+      serviceAccountName: {{ .Release.Name }}
       containers:
       - name: {{ .Values.moAgent.image.containerName }}
         image: "{{ .Values.moAgent.image.repository }}:{{ .Values.moAgent.image.tag }}"
@@ -23,29 +24,43 @@ spec:
         ports:
         - containerPort: {{ .Values.moAgent.apiServer.port }}
         env:
-        - name: AWS_REGION
+        {{- if eq $.Values.moAgent.agentSpec.mo.type "env" }}
+        - name: MO_HOST
           valueFrom:
             secretKeyRef:
-              name: aws
-              key: AWS_REGION
-              optional: false 
-        - name: AWS_ACCESS_KEY_ID
+              name: {{ $.Values.moAgent.agentSpec.secret }}
+              key: MO_HOST
+              optional: false
+        - name: MO_PORT
           valueFrom:
             secretKeyRef:
-              name: aws
-              key: AWS_ACCESS_KEY_ID
-              optional: false 
-        - name: AWS_SECRET_ACCESS_KEY
+              name: {{ $.Values.moAgent.agentSpec.secret }}
+              key: MO_PORT
+              optional: false
+        - name: MO_USER
           valueFrom:
             secretKeyRef:
-              name: aws
-              key: AWS_SECRET_ACCESS_KEY
-              optional: false 
+              name: {{ $.Values.moAgent.agentSpec.secret }}
+              key: MO_USER
+              optional: false
+        - name: MO_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ $.Values.moAgent.agentSpec.secret }}
+              key: MO_PASSWORD
+              optional: false
+        {{- end }}
         volumeMounts:
           - name: agent-config
             mountPath: /service.yaml
             subPath: service.yaml
-            
+          {{- range $.Values.moAgent.extraSecretMounts }}
+          - name: {{ .name }}
+            mountPath: {{ .mountPath }}
+            readOnly: {{ .readOnly }}
+          {{- end }}
+
+
       volumes:
       - name: agent-config
         configMap:
@@ -53,3 +68,9 @@ spec:
           items:
             - key: mo-agent.yaml
               path: service.yaml
+      {{- range $.Values.moAgent.extraSecretMounts }}
+      - name: {{ .name }}
+        secret:
+          secretName: {{ .secretName }}
+          defaultMode: {{ .defaultMode }}
+      {{- end }}

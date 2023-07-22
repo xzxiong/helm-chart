@@ -1,4 +1,7 @@
 apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mo-agent-config-map
 data:
   mo-agent.yaml: |-
     log:
@@ -19,6 +22,19 @@ data:
         tokenEffectiveTime: {{ .Values.moAgent.agentSpec.server.tokenEffectiveTime }}
         certPath: {{ .Values.moAgent.agentSpec.server.certPath }}
         mode: {{ .Values.moAgent.agentSpec.server.mode }}
+
+      mo:
+        type: {{ .Values.moAgent.agentSpec.mo.type }}
+        labels:
+          {{ toYaml .Values.moAgent.agentSpec.mo.labels }}
+        host: {{ .Values.moAgent.agentSpec.mo.host }}
+        port: {{ .Values.moAgent.agentSpec.mo.port }}
+        user: {{ .Values.moAgent.agentSpec.mo.user }}
+        password: {{ .Values.moAgent.agentSpec.mo.password }}
+        connectTimeout: {{ .Values.moAgent.agentSpec.mo.connectTimeout }}
+        maxOpens: {{ .Values.moAgent.agentSpec.mo.maxOpens }}
+        maxIdles: {{ .Values.moAgent.agentSpec.mo.maxIdles }}
+        initPingCnt: {{ .Values.moAgent.agentSpec.mo.initPingCnt }}
       
       app:
         uuid: {{ .Values.moAgent.agentSpec.app.uuid }}
@@ -40,26 +56,3 @@ data:
         labelFlushInterval: {{ .Values.moAgent.agentSpec.app.labelFlushInterval }}
         metricTablesPreCreate: {{- range .Values.moAgent.agentSpec.app.metricTablesPreCreate }}
         - {{.}}{{- end }}
-
-      fs:
-        name: {{ .Values.moAgent.agentSpec.fs.name }}
-        backend: {{ .Values.moAgent.agentSpec.fs.backend }}
-        dataDir: {{ .Values.moAgent.agentSpec.fs.dataDir }}
-        s3:
-          endpoint: {{ .Values.moAgent.agentSpec.fs.s3.endpoint }}
-          bucket: {{ .Values.moAgent.agentSpec.fs.s3.bucket }}
-          keyPrefix: {{ .Values.moAgent.agentSpec.fs.s3.keyPrefix }}
-      
-      mo:
-        host: {{ .Values.moAgent.agentSpec.mo.host }}
-        port: {{ .Values.moAgent.agentSpec.mo.port }}
-        user: {{ .Values.moAgent.agentSpec.mo.user }}
-        password: {{ .Values.moAgent.agentSpec.mo.password }}
-        connectTimeout: {{ .Values.moAgent.agentSpec.mo.connectTimeout }}
-        maxOpens: {{ .Values.moAgent.agentSpec.mo.maxOpens }}
-        maxIdles: {{ .Values.moAgent.agentSpec.mo.maxIdles }}
-        initPingCnt: {{ .Values.moAgent.agentSpec.mo.initPingCnt }}
-
-kind: ConfigMap
-metadata:
-  name: mo-agent-config-map

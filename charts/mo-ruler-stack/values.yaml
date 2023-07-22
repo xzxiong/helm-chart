@@ -17,8 +17,8 @@ moRuler:
       cpu: 1000m
       memory: 1024Mi
     requests:
-      cpu: 1000m
-      memory: 1024Mi
+      cpu: 500m
+      memory: 200Mi
 
   nameOverride: ""
   fullnameOverride: ""
@@ -30,8 +30,18 @@ moRuler:
 
   apiServer:
     port: 9199
+
+  extraSecretMounts:
+    #- name: mo-secret-mount
+    #  secretName: mo-ob-secret
+    #  mountPath: /etc/secrets/mo-secret
+    #  readOnly: true
+    #  defaultMode: 0440
   
   rulerSpec:
+    # cooperate with mo.type = env & extraSecretMounts
+    secret: root
+
     global:
         evaluation_interval: 30s
 
@@ -62,6 +72,7 @@ moRuler:
         resendDelay: 1m
         metricConfigPath: /ruler-prometheus.yml
       mo:
+        type: cfg
         host: matrixone
         port: 6001
         user: dump
@@ -322,37 +333,19 @@ alertmanager:
     # - name: FOO
     #   value: BAR
 
+## Using default values from https://github.com/grafana/helm-charts/blob/main/charts/grafana/values.yaml
+## details in https://github.com/grafana/helm-charts/blob/main/charts/grafana/README.md
+##
 grafana:
-  global:
-  # To help compatibility with other charts which use global.imagePullSecrets.
-  # Allow either an array of {name: pullSecret} maps (k8s-style), or an array of strings (more common helm-style).
-  # Can be tempalted.
-  # global:
-  #   imagePullSecrets:
-  #   - name: pullSecret1
-  #   - name: pullSecret2
-  # or
-  # global:
-  #   imagePullSecrets:
-  #   - pullSecret1
-  #   - pullSecret2
-  imagePullSecrets: []
+  enabled: true
+  coreDns:
+    enabled: true
 
   rbac:
-    create: true
-    ## Use an existing ClusterRole/Role (depending on rbac.namespaced false/true)
-    # useExistingRole: name-of-some-(cluster)role
-    pspEnabled: true
-    pspUseAppArmor: true
-    namespaced: false
-    extraRoleRules: []
-    # - apiGroups: []
-    #   resources: []
-    #   verbs: []
-    extraClusterRoleRules: []
-    # - apiGroups: []
-    #   resources: []
-    #   verbs: []
+    ## If true, Grafana PSPs will be created
+    ##
+    pspEnabled: false
+
   serviceAccount:
     create: true
     name:
@@ -438,6 +431,27 @@ grafana:
 
   # Enable creating the grafana configmap
   createConfigmap: true
+
+  sidecar:
+    dashboards:
+      enabled: true
+      label: grafana_dashboard
+      labelValue: "1"
+      # Allow discovery in all namespaces for dashboards
+      searchNamespace: ALL
+
+      ## Annotations for Grafana dashboard configmaps
+      ##
+      annotations: {}
+      multicluster:
+        global:
+          enabled: false
+        etcd:
+          enabled: false
+      provider:
+        allowUiUpdates: false
+    datasources:
+      enabled: false
 
   # Extra configmaps to mount in grafana pods
   # Values are templated.

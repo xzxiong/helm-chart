@@ -1,33 +1,12 @@
 moAgent:
   replicaCount: 1
-  
-
-  resources:
-    limits:
-      cpu: 1000m
-      memory: 2024Mi
-    requests:
-      cpu: 1000m
-      memory: 2024Mi
-
   image:
     containerName: mo-agent
-    repository: matrixorigin/observability
-    pullPolicy: Always
-    # Overrides the image tag whose default is the chart appVersion.
-    tag: "mo-agent-0.7.0"
-
+    pullPolicy: IfNotPresent
+    repository: matrixone-cloud/observability
+    tag: mo-agent-local
   nameOverride: ""
   fullnameOverride: ""
-  
-  service:
-    type: ClusterIP
-    port: 8000
-    targetPort: 8000 
-
-  apiServer:
-    port: 8000
-  
   agentSpec:
     log:
       level: info
@@ -36,16 +15,16 @@ moAgent:
       maxSize:
       maxDays:
       maxBackups:
-
-    server:
-      host: localhost
-      port: 8000
-      privateKeyFile:
-      publicKeyFile:
-      tokenEffectiveTime: 2
-      certPath:
-      mode: playground
-
+    mo:
+      host: matrixone.xiezexiong
+      #host: mo-tp-cn.xiezexiong
+      port: 6001
+      user: dump
+      password: 111
+      connectTimeout: 15s
+      maxOpens: 5
+      maxIdles: -1
+      initPingCnt: 60
     app:
       uuid: 8f0e5ef6de8fe306d772fba5d29e75e8
       account: sys
@@ -73,60 +52,6 @@ moAgent:
       labelFlushInterval: 6s
       # comment to use values default: prom,node-exporter
       # metricTablesPreCreate: 
-
-    fs:
-      name: ETL
-      # [MEM|DISK|DISK-ETL|S3|MINIO]
-      backend: S3
-      dataDir: "mo-data/etl"
-      s3:
-        endpoint: s3.us-west-2.amazonaws.com
-        # test
-        # endpoint: http://minio-0.minio.mo-system:9000
-        bucket: <OB_BUCKET_PATH>
-        keyPrefix: "etl"
-
-    mo:
-      host: mo-tp-cn.<OB_NAMESPACE>
-      port: 6001
-      user: dump
-      password: 111
-      connectTimeout: 15s
-      maxOpens: 5
-      maxIdles: -1
-      initPingCnt: 60
-
-cadvisor:
-  enabled: true
-  container:
-    port: 8080
-    additionalArgs:
-      - --housekeeping_interval=10s                       # kubernetes default args
-      - --max_housekeeping_interval=15s
-      - --event_storage_event_limit=default=0
-      - --event_storage_age_limit=default=0
-      - --disable_metrics=percpu,process,sched,tcp,udp    # enable only diskIO, cpu, memory, network, disk
-      - --docker_only
-    hostPaths:
-      - name: rootfs
-        path: "/"
-        mount: "/rootfs"
-      - name: varrun
-        path: "/var/run"
-      - name: sys
-        path: "/sys"
-      - name: docker
-        path: "/var/lib/docker"
-      - name: disk
-        path: "/dev/disk"
-
-  resources: {}
-    # limits:
-    #   cpu: 100m
-    #   memory: 128Mi
-    # requests:
-    #   cpu: 100m
-    #   memory: 128Mi
 
 prometheus:
   enabled: true
@@ -187,7 +112,8 @@ prometheus:
     extraFlags:
       - web.enable-lifecycle
     remoteWrite: 
-      - url: "http://mo-agent-service.<OB_NAMESPACE>:8000/v1/metrics"
+      - url: "http://mo-agent-service.mo-ob:8000/v1/metrics"
+
   # 这里需要将rule置空，否则报错
   serverFiles:
     prometheus.yml:
@@ -272,40 +198,17 @@ prometheus:
               target_label: node
               
 fluent-bit:
+  enabled: false
+  replicaCount: 1
   image:
     repository: cr.fluentbit.io/fluent/fluent-bit
     # Overrides the image tag whose default is {{ .Chart.AppVersion }}
     tag: 2.0.8-debug
     pullPolicy: Always
   logLevel: info
-  replicaCount: 1
-  enabled: true
   ## https://docs.fluentbit.io/manual/administration/configuring-fluent-bit/configuration-file
   config:
-    service: |
-      [SERVICE]
-          Daemon Off
-          Flush {{ .Values.flush }}
-          Log_Level {{ .Values.logLevel }}
-          Parsers_File parsers.conf
-          Parsers_File custom_parsers.conf
-          HTTP_Server On
-          HTTP_Listen 0.0.0.0
-          HTTP_Port {{ .Values.metricsPort }}
-          Health_Check On
-    ## https://docs.fluentbit.io/manual/pipeline/inputs
     inputs: |
-      # Blacklist Mode
-      # [INPUT]
-      #     Name tail
-      #     Exclude_Path     /var/log/containers/*fluent-bit*,/var/log/containers/*mo-tp-cn*
-      #     Path             /var/log/containers/*.log
-      #     multiline.parser docker, cri, go 
-      #     Tag kube.*
-      #     Mem_Buf_Limit 5MB
-      #     Skip_Long_Lines On
-      #     Refresh_Interval  10
-      
       # Whitelist Mode
       [INPUT]
           Name tail
@@ -315,15 +218,22 @@ fluent-bit:
           Mem_Buf_Limit 5MB
           Skip_Long_Lines Off
           Refresh_Interval  10
-      
-      # dataplane-log
       [INPUT]
-          Name                systemd
-          Tag                 dataplane.systemd.*
-          Systemd_Filter      _SYSTEMD_UNIT=docker.service
-          Systemd_Filter      _SYSTEMD_UNIT=kubelet.service
-          Path                /var/log/journal
-
+          Name tail
+          Path             /var/log/containers/*mo-log*.log,/var/log/containers/*mo-dn*.log,/var/log/containers/*mo-cn*.log
+          multiline.parser docker, cri, go 
+          Tag kube.*
+          Mem_Buf_Limit 5MB
+          Skip_Long_Lines Off
+          Refresh_Interval  10
+      [INPUT]
+          Name tail
+          Path             /var/log/containers/*mo-agent-deployment*.log
+          multiline.parser docker, cri, go 
+          Tag kube.*
+          Mem_Buf_Limit 5MB
+          Skip_Long_Lines Off
+          Refresh_Interval  10
       # host-log
       [INPUT]
           Name                tail
@@ -333,7 +243,6 @@ fluent-bit:
           Mem_Buf_Limit       5MB
           Skip_Long_Lines     On
           Refresh_Interval    10
-
       [INPUT]
           Name                tail
           Tag                 host.messages
@@ -342,7 +251,6 @@ fluent-bit:
           Mem_Buf_Limit       5MB
           Skip_Long_Lines     On
           Refresh_Interval    10
-
       [INPUT]
           Name                tail
           Tag                 host.secure
@@ -352,104 +260,6 @@ fluent-bit:
           Mem_Buf_Limit       5MB
           Skip_Long_Lines     On
           Refresh_Interval    10
-
-    ## https://docs.fluentbit.io/manual/pipeline/filters
-    filters: |
-      # filter for k8s
-      [FILTER]
-          Name kubernetes
-          Match kube.*
-          Merge_Log On
-          Keep_Log Off
-          K8S-Logging.Parser On
-          K8S-Logging.Exclude On
-      # pick below "wildcard" field to parse, others move to "extra"
-      [FILTER]
-          Name nest
-          Match kube.*
-          Operation nest
-          Wildcard log
-          Wildcard msg
-          Wildcard time
-          Wildcard status
-          Wildcard stacktrace
-          Wildcard kubernetes
-          Wildcard level
-          Nested_under moob_fluentbit_extra
-      [FILTER]
-          Name nest
-          Match kube.*
-          Operation nest
-          Wildcard *
-          Nest_under extra
-      [FILTER]
-          Name nest
-          Match kube.*
-          Operation lift
-          Nested_under extra
-          Add_prefix Lifted_
-      [FILTER]
-          Name nest
-          Match kube.*
-          Operation lift
-          Nested_under Lifted_moob_fluentbit_extra
-      [FILTER]
-          name nest
-          Match kube.*
-          Operation lift
-      [FILTER]
-          Name nest
-          Match kube.*
-          Operation nest
-          Wildcard Lifted_*
-          Nested_under extra
-          Remove_prefix Lifted_
-      [FILTER]
-          Name nest
-          Match kube.*
-          Operation lift
-          Nested_under kubernetes
-          Add_prefix k8s_
-      [FILTER]
-          Name                modify
-          Match               kube.*
-          Copy                k8s_namespace_name          service_name
-          Copy                k8s_container_name             app_name
-      [FILTER]
-          Name nest
-          Match kube.*
-          Operation nest
-          Wildcard k8s_*
-          Nested_under kubernetes
-          Remove_prefix k8s_
-      # filter for syslog
-      [FILTER]
-          Name                modify
-          Match               dataplane.systemd.*
-          Rename              _HOSTNAME                   hostname
-          Add                 service_name                dataplane_systemd
-          Copy                _SYSTEMD_UNIT               app_name
-          Rename              _SYSTEMD_UNIT               systemd_unit
-          Rename              MESSAGE                     message
-          Remove_regex        ^((?!hostname|systemd_unit|service_name|app_name|message).)*$
-      
-      [FILTER]
-          Name                modify
-          Match               host.dmesg
-          Add   service_name  syslog
-          Add   app_name      dmesg
-      
-      [FILTER]
-          Name                modify
-          Match               host.messages
-          Add   service_name  syslog
-          Add   app_name      messages
-      [FILTER]
-          Name                modify
-          Match               host.secure
-          Add   service_name  syslog
-          Add   app_name      secure
-    
     outputs: |
       [OUTPUT]
           Name  http
@@ -464,27 +274,4 @@ fluent-bit:
           # Format json
           Json_date_key timestamp
           Json_date_format iso8601
-    customParsers: |
-      [PARSER]
-          Name docker_no_time
-          Format json
-          Time_Keep Off
-          Time_Key time
-          Time_Format %Y-%m-%dT%H:%M:%S.%L
-      [PARSER]
-          Name                syslog
-          Format              regex
-          Regex               ^(?<time>[^ ]* {1,2}[^ ]* [^ ]*) (?<host>[^ ]*) (?<ident>[a-zA-Z0-9_\/\.\-]*)(?:\[(?<pid>[0-9]+)\])?(?:[^\:]*\:)? *(?<message>.*)$
-          Time_Key            time
-          Time_Format         %b %d %H:%M:%S
-      [PARSER]
-          Name                container_firstline
-          Format              regex
-          Regex               (?<log>(?<="log":")\S(?!\.).*?)(?<!\\)".*(?<stream>(?<="stream":").*?)".*(?<time>\d{4}-\d{1,2}-\d{1,2}T\d{2}:\d{2}:\d{2}\.\w*).*(?=})
-          Time_Key            time
-          Time_Format         %Y-%m-%dT%H:%M:%S.%LZ
-
-
-
-
 

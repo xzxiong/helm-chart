@@ -1,4 +1,7 @@
 apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mo-ruler-config-map
 data:
   mo-ruler.yaml: |-
     log:
@@ -19,6 +22,9 @@ data:
         resendDelay: {{ .Values.moRuler.rulerSpec.ruler.rule.resendDelay }}
         metricConfigPath: {{ .Values.moRuler.rulerSpec.ruler.rule.metricConfigPath }}
       mo:
+        type: {{ .Values.moRuler.rulerSpec.ruler.mo.type }}
+        labels:
+          {{ toYaml .Values.moRuler.rulerSpec.ruler.mo.labels }}
         host: {{ .Values.moRuler.rulerSpec.ruler.mo.host }}
         port: {{ .Values.moRuler.rulerSpec.ruler.mo.port }}
         user: {{ .Values.moRuler.rulerSpec.ruler.mo.user }}
@@ -63,8 +69,3 @@ data:
                 {{- range .Values.moRuler.rulerSpec.alerting.alertingEndpoint.targets }}
                 - {{ . | quote }}
                 {{- end }}
-
-kind: ConfigMap
-metadata:
-  creationTimestamp: "2023-01-11T08:35:43Z"
-  name: mo-ruler-config-map

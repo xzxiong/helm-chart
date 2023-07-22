@@ -1,35 +1,32 @@
 grafana:
   replicas: 1
   enabled: true
-  adminUser: admin
-  adminPassword: admin
-  datasources: 
-    datasources.yaml:
-      apiVersion: 1
-      datasources:
-      - name: MO-OB-Control-Plane-Metrics
-        type: prometheus
-        url: http://mo-ruler-service.mo-ob:9199
-        access: proxy
-      - name: MO-Ruler-Control-Plane-Logs
-        type: mysql
-        # no http://
-        url: mo-tp-cn.mo-ob:6001
-        isDefault: true
-        user: dump
-        jsonData:
-          database: mo_ob_logs
-        secureJsonData:
-          password: 111
-      - name: MO-Ruler-Unit-01-Logs
-        type: mysql
-        # no http://
-        url: freetier-01.cluster.dev.matrixone.tech:6001
-        user: mocloud_mo_ob\:admin\:accountadmin
-        jsonData:
-          database: mo_ob_logs
-        secureJsonData:
-          password: 111
+    # static passwd
+    #adminUser: admin
+    #adminPassword: admin
+  admin:
+    ## Name of the secret. Can be templated.
+    existingSecret: "grafana-admin-secret"
+    userKey: admin-user
+    passwordKey: admin-password
+  # for grafana.ini
+  extraSecretMounts:
+    - name: auth-generic-oauth-secret-mount
+      secretName: auth-generic-oauth-secret
+      defaultMode: 0440
+      mountPath: /etc/secrets/auth_generic_oauth
+      readOnly: true
+  grafana.ini:
+    auth.generic_oauth:
+      name: dex
+      enabled: true
+      scopes: openid profile email offline_access
+      auth_url: https://oidc.matrixorigin.cn:31443/dex/auth
+      token_url: https://oidc.matrixorigin.cn:31443/dex/token
+      api_url: https://oidc.matrixorigin.cn:31443/dex/userinfo
+      allow_sign_up: true
+      client_id: $__file{/etc/secrets/auth_generic_oauth/client_id}
+      client_secret: $__file{/etc/secrets/auth_generic_oauth/client_secret}
   service:
     enabled: true
     type: LoadBalancer
@@ -42,20 +39,12 @@ grafana:
     portName: service
     # Adds the appProtocol field to the service. This allows to work with istio protocol selection. Ex: "http" or "tcp"
     appProtocol: ""
-  dashboardProviders: 
-    dashboardproviders.yaml:
-      apiVersion: 1
-      providers:
-      - name: 'matrixone-cloud'
-        orgId: 1
-        folder: ''
-        type: file
-        disableDeletion: false
-        editable: true
-        options:
-          path: /var/lib/grafana/dashboards/matrixone-cloud
-  dashboardsConfigMaps:
-    matrixone-cloud: "grafana-dashboards"
+  sidecar:
+    dashboards:
+      enabled: true
+    datasources:
+      enabled: true
+      searchNamespace: ALL
 
 alertmanager:
   replicaCount: 1
@@ -88,50 +77,30 @@ alertmanager:
     readOnly: true
 
 moRuler:
-  containerName: mo-ruler
   replicaCount: 1
   image:
-    repository: matrixorigin/observability
-    tag: mo-ruler-0.7.0
-    pullPolicy: Always
-  apiServer:
-    port: 9199
+    repository: matrixone-cloud/observability
+    tag: mo-ruler-local
+    pullPolicy: IfNotPresent
 
-  resources:
-    limits:
-      cpu: 1000m
-      memory: 1024Mi
-    requests:
-      cpu: 1000m
-      memory: 1024Mi
-    
-  service:
-    type: ClusterIP
-    port: 9199
+  extraSecretMounts:
+  - name: ruler-mo-secret-mount
+    secretName: mo-ob-secret
+    mountPath: /etc/secrets/ruler-mo-secret
+    readOnly: true
+    defaultMode: 0440
   
   rulerSpec:
     alerting:
       alertingEndpoint:
         scheme: http
         targets:
-          - "mo-ruler-stack-alertmanager.<OB_NAMESPACE>:9093"
-    log:
-      level: debug
-      format: console
-      filename:
-      maxSize:
-      maxDays:
-      maxBackups:
+          - "mo-ruler-stack-alertmanager.mo-ob:9093"
+    secret: mo-ob-secret
     ruler:
-      rule:
-        ruleType: metric
-        notificationQueueCapacity: 10000
-        outageTolerance: 1h
-        forGracePeriod: 10m
-        resendDelay: 1m
-        metricConfigPath: /ruler-prometheus.yml
       mo:
-        host: mo-tp-cn.<OB_NAMESPACE>
+        type: env
+        host: matrixone.xiezexiong
         port: 6001
         user: dump
         password: 111
@@ -139,22 +108,3 @@ moRuler:
         maxOpens: 5
         maxIdles: -1
         initPingCnt: 10
-      query:
-        maxQueryTimeout: 2m
-        subQueryStepInterval: 1m
-        lookBackDelta: 5m
-        maxSamples: 50000000
-        maxPointsPerTs: 11000
-        database: mysql
-        account: sys
-      apiServer:
-        lookBackDelta: 5m
-        listenAddress: 0.0.0.0:9199
-        readTimeout: 5m
-        maxConnections: 512
-        routePrefix: /
-        consoleTemplatesPath: consoles
-        consoleLibrariesPath: console_libraries
-        enableLifecycle: false
-        pageTitle: MO-Ruler Server
-        appName: MO-Ruler

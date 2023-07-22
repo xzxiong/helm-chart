@@ -447,12 +447,12 @@
     ]
   },
   "time": {
-    "from": "now-6h",
+    "from": "now-1h",
     "to": "now"
   },
   "timepicker": {},
   "timezone": "",
-  "title": "MO-OB Logs",
+  "title": "MOCloud / Logs",
   "uid": "ZH3viux4k",
   "version": 1,
   "weekStart": ""

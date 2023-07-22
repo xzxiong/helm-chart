@@ -14,6 +14,7 @@ spec:
       labels:
         app: mo-ruler
     spec:
+      serviceAccountName: {{ .Release.Name }}
       containers:
       - name: {{ .Values.moRuler.image.containerName }}
         image: "{{ .Values.moRuler.image.repository }}:{{ .Values.moRuler.image.tag }}"
@@ -22,6 +23,34 @@ spec:
 {{ toYaml .Values.moRuler.resources | indent 10 }}
         ports:
         - containerPort: {{ .Values.moRuler.apiServer.port }}
+        env:
+        {{- if eq .Values.moRuler.rulerSpec.ruler.mo.type "env" }}
+        - name: MO_HOST
+          valueFrom:
+            secretKeyRef:
+              name: {{ $.Values.moRuler.rulerSpec.secret }}
+              key: MO_HOST
+              optional: false
+        - name: MO_PORT
+          valueFrom:
+            secretKeyRef:
+              name: {{ $.Values.moRuler.rulerSpec.secret }}
+              key: MO_PORT
+              optional: false
+        - name: MO_USER
+          valueFrom:
+            secretKeyRef:
+              name: {{ $.Values.moRuler.rulerSpec.secret }}
+              key: MO_USER
+              optional: false
+        - name: MO_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ $.Values.moRuler.rulerSpec.secret }}
+              key: MO_PASSWORD
+              optional: false
+        {{- end }}
+
         volumeMounts:
           - name: ruler-config
             mountPath: /service.yaml
@@ -33,7 +62,13 @@ spec:
 
           - name: alert-rules
             mountPath: /rules
-      
+
+          {{- range $.Values.moRuler.extraSecretMounts }}
+          - name: {{ .name }}
+            mountPath: {{ .mountPath }}
+            readOnly: {{ .readOnly }}
+          {{- end }}
+
       volumes:
       - name: ruler-config
         configMap:
@@ -55,3 +90,11 @@ spec:
           # items:
           # - key: test_rule.yaml
           #   path: test_rule.yaml
+
+      {{- if $.Values.moRuler.extraSecretMounts }}
+      {{- range $.Values.moRuler.extraSecretMounts }}
+      - name: {{ .name }}
+        secret:
+          secretName: {{ .secretName }}
+          defaultMode: {{ .defaultMode }}
+      {{- end }}

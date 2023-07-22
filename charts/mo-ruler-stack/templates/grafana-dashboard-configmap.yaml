@@ -5,13 +5,15 @@ metadata:
   labels:
     grafana_dashboard: "1"
 data:
+  ## MO Cloud Service
+  MO-Auth-Service-Metrics.json: |
+{{ .Files.Get "grafana/dashboards/matrixone-cloud/MO-Auth-Service-Metrics.json" | indent 4 }}
+  MO-Cluster-Service-Metrics.json: |
+{{ .Files.Get "grafana/dashboards/matrixone-cloud/MO-Cluster-Service-Metrics.json" | indent 4 }}
+  ## MOOB logs
   MO-OB-Logs.json: |
 {{ .Files.Get "grafana/dashboards/matrixone-cloud/MO-OB-Logs.json" | indent 4 }}
   MO-OB-Cadvisor.json: |
 {{ .Files.Get "grafana/dashboards/matrixone-cloud/MO-OB-Cadvisor.json" | indent 4 }}
   MO-OB-Node-Exporter.json: |
 {{ .Files.Get "grafana/dashboards/matrixone-cloud/MO-OB-Node-Exporter.json" | indent 4 }}
-  MO-Auth-Service-Metrics.json: |
-{{ .Files.Get "grafana/dashboards/matrixone-cloud/MO-Auth-Service-Metrics.json" | indent 4 }}
-  MO-Cluster-Service-Metrics.json: |
-{{ .Files.Get "grafana/dashboards/matrixone-cloud/MO-Cluster-Service-Metrics.json" | indent 4 }}
