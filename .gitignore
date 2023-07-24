@@ -19,3 +19,9 @@
 
 # Go workspace file
 go.work
+
+## helm
+Chart.lock
+charts/*/charts
+values.backup.yaml
+mo.old.yaml

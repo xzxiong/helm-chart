@@ -1,16 +1,15 @@
 # Default values for mo-ruler-stack.
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
-
 moRuler:
   replicaCount: 1
   
   image:
     containerName: mo-ruler
-    repository: matrixone-cloud/observability
+    repository: matrixorigin/observability
     pullPolicy: IfNotPresent
     # Overrides the image tag whose default is the chart appVersion.
-    tag: "0.9.0-alpha.1"
+    tag: mo-ruler-0.9.0-alpha.2
 
   resources:
     limits:
@@ -53,7 +52,7 @@ moRuler:
       alertingEndpoint:
         scheme: http
         targets:
-          - "{{ .Release.Name }}-alertmanager.mo-ob:9093"
+          - "mo-ruler-stack-alertmanager:9093"
 
     log:
         level: debug
@@ -109,8 +108,8 @@ moRuler:
 ## ref: https://prometheus.io/docs/alerting/alertmanager/
 ##
 alertmanager:
+  enabled: false
   replicaCount: 1
-  enabled: true
   config:
     global: 
         resolve_timeout: 5m

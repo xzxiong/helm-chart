@@ -2,7 +2,7 @@ grafana:
   enabled: true
 
 alertmanager:
-  enabled: true
+  enabled: false
 
 moRuler:
   replicaCount: 1

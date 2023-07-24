@@ -9,7 +9,8 @@ moAgent:
     repository: matrixorigin/observability
     pullPolicy: IfNotPresent
     # Overrides the image tag whose default is the chart appVersion.
-    tag: "0.9.0"
+    tag: mo-agent-0.9.0-alpha.2
+
   resources:
     limits:
       cpu: 1000m
@@ -1089,7 +1090,8 @@ moAgent:
       # - kubernetes_build_info
 
 
-## default value https://github.com/prometheus-community/helm-charts/blob/main/charts/kube-prometheus-stack/values.yaml
+## Default value https://github.com/prometheus-community/helm-charts/blob/main/charts/prometheus/values.yaml
+##
 prometheus:
   enabled: true
   global:
@@ -1149,7 +1151,7 @@ prometheus:
     extraFlags:
       - web.enable-lifecycle
     remoteWrite: 
-      - url: "http://mo-agent-service.mo-ob:8000/v1/metrics"
+      - url: "http://mo-agent-service:8000/v1/metrics"
 
   # 这里需要将rule置空，否则报错
   serverFiles:
@@ -1161,6 +1163,7 @@ prometheus:
             - targets:
               - localhost:9090
 
+        ## ignore job kubernetes-apiservers before v1.0.0
         #- job_name: 'kubernetes-apiservers'
 
         - job_name: 'kubernetes-nodes'
@@ -1502,46 +1505,46 @@ prometheus:
         - job_name: "mocloud-application"
           honor_labels: true
           kubernetes_sd_configs:
-          - role: endpoints
+            - role: endpoints
           relabel_configs:
-          - action: keep
-            regex: "mo-cloud"
-            source_labels:
-            - __meta_kubernetes_namespace
-          - action: replace
-            regex: (https?)
-            source_labels:
-            - __meta_kubernetes_service_annotation_prometheus_io_scheme
-            target_label: __scheme__
-          - action: replace
-            regex: (.+)
-            source_labels:
-            - __meta_kubernetes_service_annotation_prometheus_io_path
-            target_label: __metrics_path__
-          - action: replace
-            regex: (.+?)(?::\d+)?;(\d+)
-            replacement: $1:$2
-            source_labels:
-            - __address__
-            - __meta_kubernetes_service_annotation_prometheus_io_port
-            target_label: __address__
-          - action: labelmap
-            regex: __meta_kubernetes_service_annotation_prometheus_io_param_(.+)
-            replacement: __param_$1
-          - action: labelmap
-            regex: __meta_kubernetes_service_label_(.+)
-          - action: replace
-            source_labels:
-            - __meta_kubernetes_namespace
-            target_label: namespace
-          - action: replace
-            source_labels:
-            - __meta_kubernetes_service_name
-            target_label: service
-          - action: replace
-            source_labels:
-            - __meta_kubernetes_pod_node_name
-            target_label: node
+            - action: keep
+              regex: "mo-cloud"
+              source_labels:
+              - __meta_kubernetes_namespace
+            - action: replace
+              regex: (https?)
+              source_labels:
+              - __meta_kubernetes_service_annotation_prometheus_io_scheme
+              target_label: __scheme__
+            - action: replace
+              regex: (.+)
+              source_labels:
+              - __meta_kubernetes_service_annotation_prometheus_io_path
+              target_label: __metrics_path__
+            - action: replace
+              regex: (.+?)(?::\d+)?;(\d+)
+              replacement: $1:$2
+              source_labels:
+              - __address__
+              - __meta_kubernetes_service_annotation_prometheus_io_port
+              target_label: __address__
+            - action: labelmap
+              regex: __meta_kubernetes_service_annotation_prometheus_io_param_(.+)
+              replacement: __param_$1
+            - action: labelmap
+              regex: __meta_kubernetes_service_label_(.+)
+            - action: replace
+              source_labels:
+              - __meta_kubernetes_namespace
+              target_label: namespace
+            - action: replace
+              source_labels:
+              - __meta_kubernetes_service_name
+              target_label: service
+            - action: replace
+              source_labels:
+              - __meta_kubernetes_pod_node_name
+              target_label: node
 
   # adds additional scrape configs to prometheus.yml
   # must be a string so you have to add a | after extraScrapeConfigs:
@@ -1563,7 +1566,8 @@ prometheus:
     #       replacement: prometheus-blackbox-exporter:9115
 
 
-# Extend default values from https://github.com/fluent/helm-charts/blob/main/charts/fluent-bit/values.yaml
+## Extend default values from https://github.com/fluent/helm-charts/blob/main/charts/fluent-bit/values.yaml
+##
 fluent-bit:
   enabled: true
 
@@ -1571,9 +1575,6 @@ fluent-bit:
 
   # kind -- DaemonSet or Deployment
   kind: DaemonSet
-
-  # replicaCount -- Only applicable if kind=Deployment
-  replicaCount: 1
 
   image:
     repository: cr.fluentbit.io/fluent/fluent-bit
@@ -1791,3 +1792,32 @@ fluent-bit:
           Regex               (?<log>(?<="log":")\S(?!\.).*?)(?<!\\)".*(?<stream>(?<="stream":").*?)".*(?<time>\d{4}-\d{1,2}-\d{1,2}T\d{2}:\d{2}:\d{2}\.\w*).*(?=})
           Time_Key            time
           Time_Format         %Y-%m-%dT%H:%M:%S.%LZ
+
+## 部署cadvisor
+cadvisor:
+  enabled: false
+  kind: DaemonSet
+  tolerations:
+    - operator: Exists
+  container:
+    port: 8080
+    additionalArgs:
+      - --housekeeping_interval=10s                       # kubernetes default args
+      - --max_housekeeping_interval=15s
+      - --event_storage_event_limit=default=0
+      - --event_storage_age_limit=default=0
+      - --disable_metrics=percpu,process,sched,tcp,udp    # enable only diskIO, cpu, memory, network, disk
+      - --docker_only
+    hostPaths:
+      - name: rootfs
+        path: "/"
+        mount: "/rootfs"
+      - name: varrun
+        path: "/var/run"
+      - name: sys
+        path: "/sys"
+      - name: docker
+        path: "/var/lib/docker"
+      - name: disk
+        path: "/dev/disk"
+

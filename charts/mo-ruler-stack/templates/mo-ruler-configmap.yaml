@@ -21,8 +21,8 @@ data:
         metricConfigPath: {{ .Values.moRuler.rulerSpec.ruler.rule.metricConfigPath }}
       mo:
         type: {{ .Values.moRuler.rulerSpec.ruler.mo.type }}
-        labels:
-          {{ toYaml .Values.moRuler.rulerSpec.ruler.mo.labels }}
+        labels: {{- range $k, $v := .Values.moRuler.rulerSpec.ruler.mo.labels }}
+          - {{ $k }}={{ $v }}{{- end}}
         host: {{ .Values.moRuler.rulerSpec.ruler.mo.host }}
         port: {{ .Values.moRuler.rulerSpec.ruler.mo.port }}
         user: {{ .Values.moRuler.rulerSpec.ruler.mo.user }}
