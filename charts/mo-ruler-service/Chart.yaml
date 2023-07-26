@@ -1,0 +1,11 @@
+apiVersion: v2
+name: mo-ruler
+description: MO-Ruler's Helm chart for Kubernetes
+version: 0.1.0
+type: application
+appVersion: "0.1.0"
+dependencies:
+- condition: mo-ruler-stack.enabled
+  name: mo-ruler-stack
+  repository: https://matrixone-cloud.github.io/observability
+  version: 0.9.0-alpha.2

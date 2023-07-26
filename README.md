@@ -22,7 +22,7 @@ To install the <chart-name> chart:
 
 To show the <chart-name> chart version:
 
-    helm search repo my-<chart-name> <alias>/<chart-name> --versions --devel
+    helm search repo <alias>/<chart-name> --versions --devel
 
 To uninstall the chart:
 

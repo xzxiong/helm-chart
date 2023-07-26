@@ -1,0 +1,25 @@
+# Default values for mo-ruler-stack.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+mo-ruler-stack:
+  enabled: true
+
+  moRuler:
+    replicaCount: 1
+    image:
+      repository: matrixorigin/observability
+      tag: mo-ruler-0.9.0-alpha.2
+      pullPolicy: IfNotPresent
+    rulerSpec:
+      ruler:
+        mo:
+          type: cluster
+          labels:
+            matrixone.cloud/role: observability
+
+  grafana:
+    enabled: false
+
+  alertmanager:
+    enabled: false

@@ -9,7 +9,7 @@ moAgent:
     repository: matrixorigin/observability
     pullPolicy: IfNotPresent
     # Overrides the image tag whose default is the chart appVersion.
-    tag: mo-agent-0.9.0-alpha.2
+    tag: agent-0.9.0-alpha.2
 
   resources:
     limits:

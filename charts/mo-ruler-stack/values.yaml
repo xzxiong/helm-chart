@@ -9,7 +9,7 @@ moRuler:
     repository: matrixorigin/observability
     pullPolicy: IfNotPresent
     # Overrides the image tag whose default is the chart appVersion.
-    tag: mo-ruler-0.9.0-alpha.2
+    tag: ruler-0.9.0-alpha.2
 
   resources:
     limits:
