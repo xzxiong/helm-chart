@@ -1,0 +1,165 @@
+## Default value https://github.com/grafana/helm-charts/blob/main/charts/loki-stack/values.yaml
+##
+loki-stack:
+  enabled: true
+  test_pod:
+    enabled: false
+    image: bats/bats:1.8.2
+    pullPolicy: IfNotPresent
+  loki:
+    enabled: true
+    isDefault: true
+    config:
+      storage_config:
+        boltdb_shipper:
+          active_index_directory: /data/loki/boltdb-shipper-active
+          cache_location: /data/loki/boltdb-shipper-cache
+          cache_ttl: 24h         # Can be increased for faster performance over longer query periods, uses more disk space
+          shared_store: s3
+        aws:
+          bucketnames: unit-cn-hangzhou-loki
+          s3forcepathstyle: false
+          # s3 适用于aws或者阿里云
+          s3: s3://access_key:secret_access_key@custom_endpoint/bucket_name
+      schema_config:
+        configs:
+        - from: 2023-08-11
+          store: boltdb-shipper
+          object_store: s3
+          schema: v11
+          index:
+            prefix: index_
+            period: 24h
+      chunk_store_config:
+        max_look_back_period: 24h
+      compactor:
+        working_directory: /data/loki/boltdb-shipper-compactor
+        shared_store: s3
+      table_manager:
+        retention_deletes_enabled: true
+        retention_period: 720h
+
+  promtail:
+    enabled: true
+    config:
+      logLevel: debug
+      serverPort: 3101
+      clients:
+        - url: http://{{ .Release.Name }}-loki:3100/loki/api/v1/push
+    
+    tolerations:
+      - operator: Exists
+  fluent-bit:
+    enabled: false
+
+  grafana:
+    enabled: false
+    
+  prometheus:
+    enabled: false
+
+  filebeat:
+    enabled: false
+    
+
+  logstash:
+    enabled: false
+    
+  # proxy is currently only used by loki test pod
+  # Note: If http_proxy/https_proxy are set, then no_proxy should include the
+  # loki service name, so that tests are able to communicate with the loki
+  # service.
+  proxy:
+    http_proxy: ""
+    https_proxy: ""
+    no_proxy: ""
+
+kube-prometheus-stack:
+  enabled: true
+  alertmanager:
+    enabled: false
+  grafana:
+    enabled: false
+    ## ForceDeployDatasources Create datasource configmap even if grafana deployment has been disabled
+    forceDeployDatasources: true
+  nodeExporter:
+    enabled: true
+  prometheus-node-exporter:
+    tolerations:
+    - operator: Exists
+  kubeStateMetrics:
+    enabled: true
+  kube-state-metrics:
+    enabled: true
+    image:
+      registry: registry.cn-hangzhou.aliyuncs.com/ack-cos
+      repository: kube-state-metrics
+      # If unset use v + .Charts.appVersion
+      tag: ""
+      sha: ""
+      pullPolicy: IfNotPresent
+
+
+  prometheusOperator:
+    enabled: true
+    # image:
+    #   registry: registry.cn-hangzhou.aliyuncs.com
+    #   repository: prometheus-operator
+    #   tag: ""
+    #   pullPolicy: Always
+    admissionWebhooks:
+      patch:
+        enabled: true
+        image:
+          registry: registry.cn-hangzhou.aliyuncs.com/ack-cos
+          repository: kube-webhook-certgen
+          tag: v20221220-controller-v1.5.1-58-g787ea74b6
+          pullPolicy: Always
+    # prometheusConfigReloader:
+    #   image:
+    #     registry: registry.cn-hangzhou.aliyuncs.com/ack-cos
+    #     repository: prometheus-config-reloader
+    #     tag: ""
+
+  prometheus:
+    prometheusSpec:
+      # image:
+      #   registry: registry.cn-hangzhou.aliyuncs.com
+      #   repository: prometheus
+      #   tag: v2.42.0
+      #   sha: ""
+      # [必要]根据部署的云厂商选择存储配置
+      storageSpec:
+        ## Using PersistentVolumeClaim
+        ##
+        volumeClaimTemplate:
+          spec:
+            # aws使用gp3存储
+            # storageClassName: "gp3"
+            # alicloud使用以下sc
+            storageClassName: "alicloud-disk-essd"
+            accessModes: ["ReadWriteOnce"]
+            resources:
+              requests:
+                storage: 40Gi
+      additionalScrapeConfigs: 
+        - job_name: "mocloud-application"
+          honor_labels: true
+          kubernetes_sd_configs:
+            - role: endpoints
+          relabel_configs:
+            - action: keep
+              regex: "mo-cloud"
+              source_labels:
+              - __meta_kubernetes_namespace
+      alertingEndpoints:
+        - name: "mo-ob-alertmanager"
+          # 如果跨ns，需要修改
+          namespace: "mo-ob"
+          port: 9093
+          scheme: http
+          pathPrefix: ""
+          apiVersion: v2
+
+  thanosRuler:
+    enabled: false

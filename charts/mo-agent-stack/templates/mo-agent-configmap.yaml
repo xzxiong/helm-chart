@@ -30,6 +30,8 @@ data:
         tokenEffectiveTime: {{ .Values.moAgent.agentSpec.server.tokenEffectiveTime }}
         certPath: {{ .Values.moAgent.agentSpec.server.certPath }}
         mode: {{ .Values.moAgent.agentSpec.server.mode }}
+        maxAllow: {{ .Values.moAgent.agentSpec.server.maxAllow }}
+        maxWait: {{ .Values.moAgent.agentSpec.server.maxWait }}
 
       mo:
         type: {{ .Values.moAgent.agentSpec.mo.type }}

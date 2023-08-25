@@ -65,6 +65,8 @@ moAgent:
       tokenEffectiveTime: 2
       certPath:
       mode: playground
+      maxAllow: 3000
+      maxWait: 5s
     mo:
       # valid value in [ cfg, env, cluster ], default: cfg.
       type: cfg

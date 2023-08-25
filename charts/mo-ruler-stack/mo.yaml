@@ -1,10 +1,15 @@
 grafana:
   enabled: true
 
+
 alertmanager:
-  enabled: false
+  enabled: true
+  fullnameOverride: "mo-ob-alertmanager"
+
 
 moRuler:
+  # if deploy in control-plane, set to false
+  enabled: false
   replicaCount: 1
   image:
     repository: matrixone-cloud/observability

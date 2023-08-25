@@ -26,6 +26,7 @@
 | k8s-resources-workloads-namespace.json | kubernetes / Compute Resources - Namespace (Workloads) |
 | k8s-scheduler.json                     | kubernetes / Scheduler                                 |
 | moc-auth-service.json                  | MOCloud / Auth-Service                                 |
+| moc-instance-service.json              | MOCloud / Instance-Service                                 |
 | moc-cluster-service.json               | MOCloud / Cluster-Service                              |
 | moc-logs.json                          | MOCloud / Logs                                         |
 | moc-nodes.json                         | MOCloud / Nodes                                        |

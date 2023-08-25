@@ -1,9 +1,19 @@
 # Default values for mo-ruler-stack.
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
+
+# secret value to create secret automatically
+secretValue:
+  # should be encoded
+  alertmanager_email_secret: requre
+  auth_generic_oauth_secret:
+    id: requre
+    secret: requre
+  instance_service_webhook_authorization: requre
+
 moRuler:
   replicaCount: 1
-  
+  enabled: false
   image:
     containerName: mo-ruler
     repository: matrixorigin/observability
@@ -21,11 +31,11 @@ moRuler:
 
   nameOverride: ""
   fullnameOverride: ""
-  
+
   service:
     type: ClusterIP
     port: 9199
-    targetPort: 9199 
+    targetPort: 9199
 
   apiServer:
     port: 9199
@@ -36,17 +46,17 @@ moRuler:
     #  mountPath: /etc/secrets/mo-secret
     #  readOnly: true
     #  defaultMode: 0440
-  
+
   rulerSpec:
     # cooperate with mo.type = env & extraSecretMounts
     secret: mo-ob-secret
 
     global:
-        evaluation_interval: 30s
+      evaluation_interval: 30s
 
     rule_files:
-        - "/rules/*.yaml"
-        - "/rules/*.yml"
+      - "/rules/*.yaml"
+      - "/rules/*.yml"
 
     alerting:
       alertingEndpoint:
@@ -55,12 +65,12 @@ moRuler:
           - "mo-ruler-stack-alertmanager:9093"
 
     log:
-        level: debug
-        format: console
-        filename:
-        maxSize:
-        maxDays:
-        maxBackups:
+      level: debug
+      format: console
+      filename:
+      maxSize:
+      maxDays:
+      maxBackups:
     ruler:
       rule:
         ruleType: metric
@@ -108,35 +118,84 @@ moRuler:
 ## ref: https://prometheus.io/docs/alerting/alertmanager/
 ##
 alertmanager:
-  enabled: false
+  enabled: true
+  fullnameOverride: "mo-ob-alertmanager"
+  persistence:
+    enabled: true
+    storageClass: "alicloud-disk-essd"
+    accessModes:
+      - ReadWriteOnce
+    # 阿里云部署时要调整为20G，因为其最小的PV只能说20G
+    size: 20Gi
+  tolerations: 
+  - operator: Exists
+  # persistence:
+  #   enabled: true
+  #   ## Persistent Volume Storage Class
+  #   ## If defined, storageClassName: <storageClass>
+  #   ## If set to "-", storageClassName: "", which disables dynamic provisioning
+  #   ## If undefined (the default) or set to null, no storageClassName spec is
+  #   ## set, choosing the default provisioner.
+  #   ##
+  #   # storageClass: "-"
+  #   accessModes:
+  #     - ReadWriteOnce
+  #   # size: 50Mi
+  # 阿里云部署时要调整为20G，因为其最小的PV只能说20G
+  #   size: 20Gi
   replicaCount: 1
+  # alertmanagerSpec:
+  #   image:
+  #     registry: registry.cn-hangzhou.aliyuncs.com
+  #     repository: alertmanager
+  #     tag: v0.25.0
+  #     sha: ""
   config:
-    global: 
-        resolve_timeout: 5m
-        smtp_from: 'it@matrixorigin.cn'
-        smtp_hello: 'smtp.exmail.qq.com:465'
-        smtp_smarthost: 'smtp.exmail.qq.com:465'
-        smtp_auth_username: 'it@matrixorigin.cn'
-        smtp_auth_password_file: '/tmp/smtp-password/smtp-password'
-        smtp_require_tls: false
+    global:
+      resolve_timeout: 5m
+      smtp_from: "it@matrixorigin.cn"
+      smtp_hello: "smtp.exmail.qq.com:465"
+      smtp_smarthost: "smtp.exmail.qq.com:465"
+      smtp_auth_username: "it@matrixorigin.cn"
+      smtp_auth_password_file: "/tmp/alertmanager-email-smtp/smtp-authorization"
+      smtp_require_tls: false
     route:
-        group_by: ['alertname']     # 分组标签
-        group_wait: 10s             # 告警等待时间。告警产生后等待10s，如果有同组告警一起发出
-        group_interval: 10s         # 两组告警的间隔时间
-        repeat_interval: 1d         # 重复告警的间隔时间，可减少相同邮件的发送频率
-        receiver: 'default-receiver'
+      group_by: ["alertname"] # 分组标签
+      group_wait: 10s # 告警等待时间。告警产生后等待10s，如果有同组告警一起发出
+      group_interval: 10s # 两组告警的间隔时间
+      repeat_interval: 1d # 重复告警的间隔时间，可减少相同邮件的发送频率
+      receiver: "null"
+      # routes:
     receivers:
-      - name: default-receiver
+      - name: email-receiver
         email_configs:
-          - to: 'user@matrixorigin.cn'
-            # send_resolved: true
-  extraSecretMounts: 
-  - name: smtp-files
-    mountPath: /tmp/smtp-password
-    subPath: ""
-    secretName: alertmanager-secret
-    readOnly: true
-
+          - to: "moc-warning@matrixone.cloud"
+          # send_resolved: true
+      - name: "null"
+      - name: 'wecom-group'
+        webhook_configs:
+        - url: "http://alertmanager-webhook-adapter/webhook/send?channel_type=weixin&token=89451de4-757f-4422-aa94-686d0a4e877e"
+      - name: notify-user
+        webhook_configs:
+          - url: http://mailservice.mo-cloud:8020/alerts
+            http_config:
+              authorization:
+                type: "Bearer"
+                credentials_file: /tmp/instance-service-webhook-authorization/instance-service
+  extraSecretMounts:
+    # kubectl -n mo-ob create secret generic instance-service-webhook-authorization --from-literal=instance-service=[your-authorization]
+    # 请注意，为了保证CI运行，这里的name请和secret的keyname一致
+    - name: instance-service                                # 这里的name请和secret的keyname一致
+      mountPath: /tmp/instance-service-webhook-authorization
+      subPath: ""
+      secretName: instance-service-webhook-authorization
+      readOnly: true
+    # kubectl -n mo-ob create secret generic alertmanager-email-secret --from-literal=smtp-authorization=[your-smtp-password]
+    - name: smtp-authorization
+      mountPath: /tmp/alertmanager-email-smtp
+      subPath: ""
+      secretName: alertmanager-email-secret
+      readOnly: true
   resources:
     limits:
       cpu: 100m
@@ -144,7 +203,6 @@ alertmanager:
     requests:
       cpu: 10m
       memory: 32Mi
-
 
 ## Using default values from https://github.com/grafana/helm-charts/blob/main/charts/grafana/values.yaml
 ## details in https://github.com/grafana/helm-charts/blob/main/charts/grafana/README.md
@@ -185,7 +243,10 @@ grafana:
     targetPort: 3000
     # targetPort: 4181 To be used with a proxy extraContainer
     ## Service annotations. Can be templated.
-    annotations: {}
+    # aws需要添加该annotation，以启用暴露在公网的LoadBalancer
+    annotations: {
+      service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing"
+    }
     labels: {}
     portName: service
     # Adds the appProtocol field to the service. This allows to work with istio protocol selection. Ex: "http" or "tcp"
@@ -196,4 +257,3 @@ grafana:
     datasources:
       enabled: true
       searchNamespace: ALL
-
