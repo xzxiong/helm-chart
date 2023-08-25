@@ -171,6 +171,22 @@ entries:
     urls:
     - https://github.com/xzxiong/helm-charts/releases/download/chart-mo-ruler-0.1.0/mo-ruler-0.1.0.tgz
     version: 0.1.0
+  mo-ruler-service:
+  - apiVersion: v2
+    appVersion: 0.1.0
+    created: "2023-08-25T07:08:08.498274726Z"
+    dependencies:
+    - condition: mo-ruler-stack.enabled
+      name: mo-ruler-stack
+      repository: https://xzxiong.github.io/helm-charts
+      version: 0.9.0-alpha.2
+    description: MO-Ruler's Helm chart for Kubernetes
+    digest: d4abd17edb8713e3a78b9030b9782fa351c3f672434f196452afd66ff665815e
+    name: mo-ruler-service
+    type: application
+    urls:
+    - https://github.com/xzxiong/helm-charts/releases/download/chart-mo-ruler-service-0.1.0/mo-ruler-service-0.1.0.tgz
+    version: 0.1.0
   mo-ruler-stack:
   - apiVersion: v2
     appVersion: 0.9.0
@@ -286,4 +302,4 @@ entries:
     urls:
     - https://github.com/xzxiong/mo-helm/releases/download/chart-mo-ruler-stack-0.7.0/mo-ruler-stack-0.7.0.tgz
     version: 0.7.0
-generated: "2023-08-25T07:03:50.13511833Z"
+generated: "2023-08-25T07:08:08.498310526Z"
