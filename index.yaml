@@ -90,6 +90,29 @@ entries:
     - https://github.com/xzxiong/helm-charts/releases/download/chart-mo-agent-stack-0.9.0-alpha.2/mo-agent-stack-0.9.0-alpha.2.tgz
     version: 0.9.0-alpha.2
   - apiVersion: v2
+    appVersion: 0.9.0
+    created: "2023-08-25T07:03:49.335197763Z"
+    dependencies:
+    - condition: fluent-bit.enabled
+      name: fluent-bit
+      repository: https://fluent.github.io/helm-charts
+      version: 0.21.7
+    - condition: prometheus.enabled
+      name: prometheus
+      repository: https://prometheus-community.github.io/helm-charts
+      version: 19.0.1
+    - condition: cadvisor.enabled
+      name: cadvisor
+      repository: https://ckotzbauer.github.io/helm-charts
+      version: 2.2.4
+    description: mo-agent's Helm chart for Kubernetes
+    digest: efecd873cdf99d67dd7448d57b6f6c391858debcd637922f87f37a9f2e3fb9b1
+    name: mo-agent-stack
+    type: application
+    urls:
+    - https://github.com/xzxiong/helm-charts/releases/download/chart-mo-agent-stack-0.9.0-alpha.2/mo-agent-stack-0.9.0-alpha.2.tgz
+    version: 0.9.0-alpha.2
+  - apiVersion: v2
     appVersion: 0.1.0
     created: "2023-07-04T08:05:23.083308484Z"
     dependencies:
@@ -112,6 +135,42 @@ entries:
     urls:
     - https://github.com/xzxiong/mo-helm/releases/download/chart-0.7.0/mo-agent-stack-0.7.0.tgz
     version: 0.7.0
+  mo-ob-opensource:
+  - apiVersion: v2
+    appVersion: 0.9.0
+    created: "2023-08-25T07:03:49.66423722Z"
+    dependencies:
+    - condition: kube-prometheus-stack.enabled
+      name: kube-prometheus-stack
+      repository: https://prometheus-community.github.io/helm-charts
+      version: 45.9.1
+    - condition: loki-stack.enabled
+      name: loki-stack
+      repository: https://grafana.github.io/helm-charts
+      version: 2.9.10
+    description: mo-ob-opensource's Helm chart for Kubernetes
+    digest: 1a41b268c9ca8f66fdd31d19e7226c667ff22039ff53708889cad296ad0884b5
+    name: mo-ob-opensource
+    type: application
+    urls:
+    - https://github.com/xzxiong/helm-charts/releases/download/chart-mo-ob-opensource-0.9.0-alpha.3/mo-ob-opensource-0.9.0-alpha.3.tgz
+    version: 0.9.0-alpha.3
+  mo-ruler:
+  - apiVersion: v2
+    appVersion: 0.1.0
+    created: "2023-08-25T07:03:49.910824167Z"
+    dependencies:
+    - condition: mo-ruler-stack.enabled
+      name: mo-ruler-stack
+      repository: https://xzxiong.github.io/helm-charts
+      version: 0.9.0-alpha.2
+    description: MO-Ruler's Helm chart for Kubernetes
+    digest: 2966ef8755e1dedaa75c28a544b701b0ebfc91d2d3108dee91377282a027d267
+    name: mo-ruler
+    type: application
+    urls:
+    - https://github.com/xzxiong/helm-charts/releases/download/chart-mo-ruler-0.1.0/mo-ruler-0.1.0.tgz
+    version: 0.1.0
   mo-ruler-stack:
   - apiVersion: v2
     appVersion: 0.9.0
@@ -172,6 +231,25 @@ entries:
     version: 0.9.1-alpha.1
   - apiVersion: v2
     appVersion: 0.9.0
+    created: "2023-08-25T07:03:50.134888033Z"
+    dependencies:
+    - condition: alertmanager.enabled
+      name: alertmanager
+      repository: https://prometheus-community.github.io/helm-charts
+      version: 0.27.*
+    - condition: grafana.enabled
+      name: grafana
+      repository: https://grafana.github.io/helm-charts
+      version: 6.51.*
+    description: mo-ruler's Helm chart for Kubernetes
+    digest: e8b0a77c8c967380f5dae5baa41fef023d7b1f00039165bf5842a24e5d547065
+    name: mo-ruler-stack
+    type: application
+    urls:
+    - https://github.com/xzxiong/helm-charts/releases/download/chart-mo-ruler-stack-0.9.0-alpha.3/mo-ruler-stack-0.9.0-alpha.3.tgz
+    version: 0.9.0-alpha.3
+  - apiVersion: v2
+    appVersion: 0.9.0
     created: "2023-07-24T12:54:36.035786708Z"
     dependencies:
     - condition: alertmanager.enabled
@@ -208,4 +286,4 @@ entries:
     urls:
     - https://github.com/xzxiong/mo-helm/releases/download/chart-mo-ruler-stack-0.7.0/mo-ruler-stack-0.7.0.tgz
     version: 0.7.0
-generated: "2023-07-24T12:54:36.035826809Z"
+generated: "2023-08-25T07:03:50.13511833Z"
