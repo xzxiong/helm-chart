@@ -68,6 +68,29 @@ entries:
     version: 0.9.1-alpha.1
   - apiVersion: v2
     appVersion: 0.9.0
+    created: "2023-08-30T11:44:28.045061448Z"
+    dependencies:
+    - condition: fluent-bit.enabled
+      name: fluent-bit
+      repository: https://fluent.github.io/helm-charts
+      version: 0.21.7
+    - condition: prometheus.enabled
+      name: prometheus
+      repository: https://prometheus-community.github.io/helm-charts
+      version: 19.0.1
+    - condition: cadvisor.enabled
+      name: cadvisor
+      repository: https://ckotzbauer.github.io/helm-charts
+      version: 2.2.4
+    description: mo-agent's Helm chart for Kubernetes
+    digest: cc0fdd019cfa89165410372aee00f743af9c9dec30bdd2e790ed008e00a9641a
+    name: mo-agent-stack
+    type: application
+    urls:
+    - https://github.com/xzxiong/helm-charts/releases/download/chart-mo-agent-stack-0.9.0-alpha.3/mo-agent-stack-0.9.0-alpha.3.tgz
+    version: 0.9.0-alpha.3
+  - apiVersion: v2
+    appVersion: 0.9.0
     created: "2023-07-24T12:54:35.833667147Z"
     dependencies:
     - condition: fluent-bit.enabled
@@ -302,4 +325,4 @@ entries:
     urls:
     - https://github.com/xzxiong/mo-helm/releases/download/chart-mo-ruler-stack-0.7.0/mo-ruler-stack-0.7.0.tgz
     version: 0.7.0
-generated: "2023-08-25T07:08:08.498310526Z"
+generated: "2023-08-30T11:44:28.045131948Z"
