@@ -1149,8 +1149,10 @@ prometheus:
         "--storage.agent.path=/prometheus",
         # "--config.file=/etc/prometheus/config_out/prometheus.env.yaml",
         "--config.file=/etc/config/prometheus.yml",
+        "--web.enable-lifecycle",
       ]
     extraFlags:
+      #if use param "defaultFlagsOverride", this config will be ignored in cmd-line.
       - web.enable-lifecycle
     remoteWrite: 
       - url: "http://mo-agent-service:8000/v1/metrics"
@@ -1547,6 +1549,58 @@ prometheus:
               source_labels:
               - __meta_kubernetes_pod_node_name
               target_label: node
+
+        - job_name: "moob-application"
+          honor_labels: true
+          kubernetes_sd_configs:
+            - role: endpoints
+          relabel_configs:
+            - action: keep
+              regex: "mo-ob"
+              source_labels:
+              - __meta_kubernetes_namespace
+            - source_labels:
+              - __meta_kubernetes_endpoints_label_need_metrics
+              action: keep
+              regex: true
+            - action: replace
+              regex: (https?)
+              source_labels:
+              - __meta_kubernetes_service_annotation_prometheus_io_scheme
+              target_label: __scheme__
+            - action: replace
+              regex: (.+)
+              source_labels:
+              - __meta_kubernetes_service_annotation_prometheus_io_path
+              target_label: __metrics_path__
+            - action: replace
+              regex: (.+?)(?::\d+)?;(\d+)
+              replacement: $1:$2
+              source_labels:
+              - __address__
+              - __meta_kubernetes_service_annotation_prometheus_io_port
+              target_label: __address__
+            - action: labelmap
+              regex: __meta_kubernetes_service_annotation_prometheus_io_param_(.+)
+              replacement: __param_$1
+            - action: labelmap
+              regex: __meta_kubernetes_service_label_(.+)
+            - action: replace
+              source_labels:
+              - __meta_kubernetes_namespace
+              target_label: namespace
+            - action: replace
+              source_labels:
+              - __meta_kubernetes_service_name
+              target_label: service
+            - action: replace
+              source_labels:
+              - __meta_kubernetes_pod_node_name
+              target_label: node
+            - source_labels:
+              - __meta_kubernetes_endpoints_label_need_metrics
+              action: replace
+              target_label: need_metrics
 
   # adds additional scrape configs to prometheus.yml
   # must be a string so you have to add a | after extraScrapeConfigs:
