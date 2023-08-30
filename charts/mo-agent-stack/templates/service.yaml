@@ -3,7 +3,8 @@ kind: Service
 metadata:
   name: mo-agent-service
   labels:
-    app-name: mo-agent
+    app: mo-agent
+    need_metrics: "true"
 spec:
   type: {{ .Values.moAgent.service.type }}
   selector:
